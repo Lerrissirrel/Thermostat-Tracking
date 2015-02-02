@@ -2,19 +2,18 @@
 $start_time = microtime(true);
 require(dirname(__FILE__).'/../common.php');
 
+// set the timezone from the config
+date_default_timezone_set( $timezone );
+
 $log->logInfo( 'temps: Start.' );
 $today = date( 'Y-m-d' );
 $yesterday = date( 'Y-m-d', strtotime( 'yesterday' ));
-if( $argc < 2 )
-{
-	$log->logError( 'temps: required argument missing.  Must send unix timestamp!' );
-	die();
-}
-$unixTime = $argv[1];	// argv[0] is this files name
 
-/**
-	* This script updates the indoor and outdoor temperatures and today's and yesterday total run time for each thermostat.
-	*/
+// Get the local time of the system running this script.  Truncate the minutes and seconds to the nearest multiple of 10 minutes since whatever is being used to run this script every half hour might get delayed a bit (like a cron job)
+$unixTime = substr_replace(date('Y-m-d H:i:s'), "0:00", 15, 4);
+
+// This script updates the indoor and outdoor temperatures and today's and yesterday total run time for each thermostat.
+
 try
 {
 	$sql = "SELECT NOW() as now_time, CONCAT( SUBSTR( NOW() , 1, 15 ) , '0:00' ) as magic_time;";
