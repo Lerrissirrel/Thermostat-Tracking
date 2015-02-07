@@ -66,7 +66,7 @@ $show_heat_cycles = (isset($_GET['chart_daily_showHeat']) && ($_GET['chart_daily
 $show_cool_cycles = (isset($_GET['chart_daily_showCool']) && ($_GET['chart_daily_showCool'] == 'false')) ? 0 : 1;
 $show_fan_cycles  = (isset($_GET['chart_daily_showFan'])  && ($_GET['chart_daily_showFan']  == 'false')) ? 0 : 1;
 // Set default for displaying set point temp to "off"
-$show_setpoint    = (isset($_GET['chart_daily_setpoint']) && ($_GET['chart_daily_setpoint']  == 'false')) ? 0 : 1;
+$show_setpoint    = (isset($_GET['chart_daily_showSetpoint']) && ($_GET['chart_daily_showSetpoint']  == 'false')) ? 0 : 1;
 
 // Set default humidity display to none
 $show_indoor_humidity = (isset($_GET['chart_daily_showIndoorHumidity']) && ($_GET['chart_daily_showIndoorHumidity'] == 'false')) ? 0 : 1;
