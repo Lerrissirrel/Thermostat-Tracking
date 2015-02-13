@@ -404,7 +404,7 @@ div.schedule form table.schedule input[type=number]
 
 						<div style='text-align: center;'>
 <?php
-    // The uptime format for GNU/Linux is different than that parsed here.  For now, just skipping this section to avoid errors in the log!
+     // The uptime format for GNU/Linux is different than that parsed here.  For now, just skipping this section to avoid errors in the log!
      $OS = @exec( 'uname -o' );
      if (!strstr( $OS, 'GNU/Linux'))
      {
