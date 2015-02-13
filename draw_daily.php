@@ -435,23 +435,24 @@ echo "<br>uuid is $uuid";
 if( $show_setpoint == 1 )
 {
 	$sqlFour =
-	"SELECT set_point, switch_time
+	"SELECT id, set_point, switch_time
 	 FROM {$dbConfig['table_prefix']}setpoints
 	 WHERE id = ?
 		AND switch_time BETWEEN ? AND ?
 	 UNION ALL
-	 SELECT set_point, switch_time
+	 SELECT id, set_point, switch_time
 	 FROM (
 		SELECT *
 		FROM {$dbConfig['table_prefix']}setpoints
-		WHERE switch_time < ?
+		WHERE switch_time < ? AND
+                id = ?
 		ORDER BY switch_time DESC
 		LIMIT 1
 		) AS one_before_start
 	 ORDER BY switch_time ASC";
 
   $queryFour = $pdo->prepare($sqlFour);
-  $result = $queryFour->execute(array( $id, $start_date, $end_date, $start_date ) );
+  $result = $queryFour->execute(array( $id, $start_date, $end_date, $start_date, $id ) );
 //$log->logInfo( "draw_daily.php: Executing sqlFour ($sqlFour) for values $id, $start_date, $end_date, $start_date" );
 	while( $row = $queryFour->fetch( PDO::FETCH_ASSOC ) )
 	{
@@ -495,7 +496,7 @@ $MyData->setSerieTicks( 'Outdoor Temp', 2 ); // n is length in pixels of dashes 
 $serieSettings = array( 'R' => 150, 'G' => 50, 'B' => 80, 'Alpha' => 100 );
 $MyData->setPalette( 'Outdoor Temp', $serieSettings );
 
-$MyData->setSerieTicks( 'Setpoint', 0 ); // n is length in pixels of dashes in line
+$MyData->setSerieTicks( 'Setpoint', 0 ); // This is only here to get the setpoint in the legend.  The lines are drawn with their own palette down below
 $serieSettings = array( 'R' => 100, 'G' => 100, 'B' => 255, 'Alpha' => 60 );
 $MyData->setPalette( 'Setpoint', $serieSettings );
 
@@ -598,7 +599,7 @@ $myPicture->drawLineChart( array( 'DisplayValues' => FALSE, 'DisplayColor' => DI
 
 $PixelsPerMinute = (($graphAreaEndX - $graphAreaStartX) / 1440) / $dayCount;  // = 0.54861 (for dayCount = 1)
 // $graphXLastDataPoint = $graphAreaEndX - 30 * $PixelsPerMinute; // this is the number of pixels, to the right of the graph area left margin, to where the last temperature point will be displayed (11:30pm).  Ideally we should be able to display the midnight point, too.  But until then, I've stopped some things from drawing past this point for aesthetic reasons.  
-$graphXLastDataPoint = $graphAreaEndX; // this is the number of pixels, to the right of the graph area left margin, to where the last temperature point will be displayed (12:59pm).  Since we don't display the last points for the last day in the display window (they are shown as the first points of the next day), it looks a bit odd to have some other things display in that last half hour (like the cycles and setpoint).
+$graphXLastDataPoint = $graphAreaEndX - 1; // this is the number of pixels, to the right of the graph area left margin, to where the last temperature point will be displayed (12:59pm).  Since we don't display the last points for the last day in the display window (they are shown as the first points of the next day), it looks a bit odd to have some other things display in that last half hour (like the cycles and setpoint).  The "-1" is so it doesn't overlap the vertical block line on the right hand y-axis
 
 /**
 	* Assumptions:
@@ -706,59 +707,120 @@ if( $show_setpoint == 1 )
 	$setpoint_scale = ($chart_y_max - $chart_y_min) / ($graphAreaEndY - $graphAreaStartY);
 
 	$first_row = 1;
+	// Used for a sanity check if we've already drawn off the right side of the display, don't bother with any more data points that came back in the query
+	$already_off_x_axis = 0; 
+
 //	while( $row = $queryFour->fetch( PDO::FETCH_ASSOC ) )
 	foreach( $queryFourData as $row )
 	{
-		/** The query returns one row prior to the current date range so that
-			* we can determine the setpoint leading into the first drawn day
-			*** This falls apart currently if there is not a setpoint for the prior day
-			*** but there should always be one unless the database table is just starting
-			*** to become populated with data.
-			*/
-		if( $first_row == 1 )
-		{
-			$first_row = 0;
-			$prev_setpoint = $row['set_point'];
-			$prev_switch_time = date_create( $from_date );
-			$start_px = $LeftMargin;
-			continue;
-		}
+	   /** The query returns one row prior to the current date range so that
+	    * we can determine the setpoint leading into the first drawn day
+	    *** This falls apart currently if there is not a setpoint for the prior day
+	    *** but there should always be one unless the database table is just starting
+	    *** to become populated with data.
+	    */
 
-		// Compute the switch time delta
-		$setpoint = $row['set_point'];
-		$switch_time = date_create($row['switch_time']);
-		$interval = $prev_switch_time->diff($switch_time);
+	   // If we already tried to draw a line that went off the right side of the graph, don't bother
+	   // with any more rows.  We should never be looking at an additional row when the previous row
+	   // was already in the next day!
+	   if ($already_off_x_axis == 1)
+	   {
+	      $log->logInfo("Found another row but were already off the right side of the graph.  Should not happen!");
+	      continue;
+	   }
+	   // Get the first set point from our query.  Under normal circumstances, this will be the last set point 
+	   // from the previous day.  However, it can also be a point from within the current display date range
+	   // and if so, we have some special handling down below
+	   if( $first_row == 1 )
+	   {
+	      if ($row['id'] != $id)
+	      {
+		 // Probably not needed any more.  The inital code for the new set point mechanism had a problem with the setpoint 
+		 // query when there were multiple thermostats.  
+		 // It might pick a "previous point" which was the immediate prior change timewise, but for a different thermostat.
+		 $log->logInfo("No previous set point.  Starting with the first one instead. Expected id: ".$id." actual: ".$row['id']);
+		 continue;
+	      }
 
-		// Compute the next end pixel based on the switch time difference
-		$end_px = $start_px + ( $interval->format('%h') * 60 + $interval->format('%i') ) * $PixelsPerMinute;
+	      // We're handlign the first row, so remember we've done so
+	      $first_row = 0;
+	      $prev_setpoint = $row['set_point'];
+	      $prev_switch_time = date_create( $from_date );
+	      $switch_time = date_create($row['switch_time']);
+	      
+	      if ($row['switch_time'] < $from_date)
+	      {
+		 // If we're the first row from the query, and we're from yesterday, start drawing at the left hand margin
+		 $start_px = $LeftMargin;
+	      }
+	      else
+	      {
+		 // If we're the first row from the query, but we're from somewhere within the display timeframe, 
+		 // it means our history doesn't go far enough back to be off the left side of the graph
+		 
+		 // Set things up so that we know where to start the first setpoint line, which we'll draw
+		 // on the next iteration of this foreach when we get the subsequent row which will be the end point
+		 // for the first horizontal line
+		 $pad_minutes = round((strtotime($row['switch_time']) - strtotime($from_date)) / 60);
+		 $start_px = $LeftMargin + ($pad_minutes * $PixelsPerMinute);
+		 $prev_switch_time = date_create($row['switch_time']);
+	      }
+	      // We're not drawing anything yet, so loop to the next row
+	      continue;
+	   }
 
-    // Draw the horizontal setpoint line
-    $myPicture->drawLine( $start_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, array( 'R' => 100, 'G' => 100, 'B' => 255, 'Ticks' => 2, 'Alpha' => 60 ) );
-		// Draw the vertical setpoint change line
-		$myPicture->drawLine( $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($setpoint-$chart_y_min)/$setpoint_scale, array( 'R' => 100, 'G' => 100, 'B' => 255, 'Ticks' => 2, 'Alpha' => 60 ) );
-
-		// Reset parameters for next iteration
-		$prev_switch_time = $switch_time;
-		$prev_setpoint = $setpoint;
-		$start_px = $end_px;
-  }
+	   // Compute the switch time delta
+	   $setpoint = $row['set_point'];
+	   $switch_time = date_create($row['switch_time']);
+	   $interval = $prev_switch_time->diff($switch_time);
+	   
+	   // Compute the next end pixel based on the switch time difference
+	   // Have to include all the minutes by adding up the days, hours and minutes since the last switch
+	   $end_px = $start_px + ( $interval->days * 24 * 60 + $interval->h * 60 + $interval->i) * $PixelsPerMinute;
+	   
+	   // If the end goes off the right side of the graph, truncate it there
+	   // Currently the right most temperature points on the graph are, at most, at 11:30pm, we continue the setpoint out to the very edge, though
+	   
+	   if ($end_px > $graphXLastDataPoint)
+	   {
+	      $end_px = $graphXLastDataPoint;
+	      // since we had to truncate a line, we know that there should be no more rows to deal with after this
+	      $already_off_x_axis = 1;
+	   }
+	   
+	   // Draw the horizontal setpoint line
+	   $myPicture->drawLine( $start_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, array( 'R' => 100, 'G' => 100, 'B' => 255, 'Ticks' => 2, 'Alpha' => 60 ) );
+	   // Draw the vertical setpoint change line
+	   $myPicture->drawLine( $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($setpoint-$chart_y_min)/$setpoint_scale, array( 'R' => 100, 'G' => 100, 'B' => 255, 'Ticks' => 2, 'Alpha' => 60 ) );
+	   
+	   // Reset parameters for next iteration
+	   $prev_switch_time = $switch_time;
+	   $prev_setpoint = $setpoint;
+	   $start_px = $end_px;
+	}
 
 	/** Draw the last setpoint horizontal line but first determine how far it needs to be drawn
-		* If the last switch_time and the current time are the same day then only draw up to the
-		* current time.  Otherwise, draw to the 23:59:59 marker.
-		*/
+	 * If the last switch_time and the current time are the same day then only draw up to the
+	 * current time.  Otherwise, draw to the 23:59:59 marker.
+	 */
 	$now = date_create();
 	$interval = $prev_switch_time->diff($now);
 	if( $prev_switch_time->format('Y-m-d') == $now->format('Y-m-d') )
 	{
-		$end_px = $start_px + ( $interval->format('%h') * 60 + $interval->format('%i') ) * $PixelsPerMinute;
-		$myPicture->drawLine( $start_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, array( "R" => 100, "G" => 100, "B" => 255, "Ticks" =>2, "Alpha" => 60 ) );
+	   // Note no reason to include days here, since we just verified that we're within the same day
+	   $end_px = $start_px + ( $interval->format('%h') * 60 + $interval->format('%i') ) * $PixelsPerMinute;
+	   
+	   // If the end of this setpoint period is off the right of the display area, truncate it.
+	   if ($end_px > $graphXLastDataPoint)
+	   {
+	      $end_px = $graphXLastDataPoint;
+	   }
 	}
 	else
 	{
-		$end_px = $graphAreaEndX;
-		$myPicture->drawLine( $start_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, array( "R" => 100, "G" => 100, "B" => 255, "Ticks" => 2, "Alpha" => 60 ) );
+	   $end_px = $graphXLastDataPoint;
 	}
+	$myPicture->drawLine( $start_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, $end_px, $graphAreaEndY-($prev_setpoint-$chart_y_min)/$setpoint_scale, array( "R" => 100, "G" => 100, "B" => 255, "Ticks" => 2, "Alpha" => 60 ) );
 }
 
 $myPicture->autoOutput( 'images/daily_chart.png' );
