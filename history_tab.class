@@ -75,7 +75,7 @@ class History
 
 		$htmlString .= "			ending on <input type='date' id='chart.history.toDate' size='10' value='{$show_date}' max='{$show_date}' step='1'/>";
 
-		$htmlString .= "			&nbsp;&nbsp;Optionally show HVAC runtimes<input type='checkbox' id='show_hvac_runtime' name='show_hvac_runtime'/>";
+		$htmlString .= "			&nbsp;&nbsp;Optionally show HVAC runtimes<input type='checkbox' id='show_hvac_runtime' name='show_hvac_runtime' onChange='javascript: toggle_daily_flag( \"show_hvac_runtime\" );'/>";
 		$htmlString .= "			<input type='button' onClick='javascript: deleteCookies(1);' value='Un-save settings' style='float: right;'>";
 		$htmlString .= "		</div>";
 
@@ -84,7 +84,20 @@ class History
 		$htmlString .= "			<div class='thermo_chart'>";
 		$htmlString .= "				<img id='history_chart' src='img/need_default.png' alt='History Graph' title='History Graph'>";
 		$htmlString .= "			</div>";
-		$htmlString .= "			<script type='text/javascript'>";
+
+		// These initializations must fall AFTER the declaration of various HTML DOM variables
+		// All of these preference values should be tested before use, don't let null (or un-set) mess up the values.
+		// Preently preferences are stored in cookies.
+		$htmlString .= "<script type='text/javascript'>";
+
+		// In JavaScript, a literal/string value of "false" is a string of non zero length and so it tests as logically true unless you look for the literal string "true"
+
+		// Restore user preference/cookie for showing/hiding hvac runtime
+		$htmlString .= "if( getCookie('show_hvac_runtime') == 'true' )";
+		$htmlString .= "{";
+		$htmlString .= "	document.getElementById('show_hvac_runtime').checked = true;";
+		$htmlString .= "}";
+
 		// Draw the chart
 		$htmlString .= "				display_historic_chart();";
 		$htmlString .= "			</script>";
@@ -95,6 +108,8 @@ class History
 
 
 		echo $htmlString;
+
+
 	}
 }
 ?>
