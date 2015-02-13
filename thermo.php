@@ -404,6 +404,10 @@ div.schedule form table.schedule input[type=number]
 
 						<div style='text-align: center;'>
 <?php
+    // The uptime format for GNU/Linux is different than that parsed here.  For now, just skipping this section to avoid errors in the log!
+     $OS = @exec( 'uname -o' );
+     if (!strstr( $OS, 'GNU/Linux'))
+     {
 	$uptime = @exec( 'uptime' );
 	if( strstr( $uptime, 'days' ) )
 	{
@@ -434,6 +438,7 @@ div.schedule form table.schedule input[type=number]
 
 	echo "<br>Server Uptime: $days days $hours hours $mins minutes";
 	echo "<br>Average Load: $load";
+     }
 ?>
 						</div>
 					</div>

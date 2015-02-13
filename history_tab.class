@@ -51,7 +51,7 @@ class History
 		foreach( $thermostats as $thermostatRec )
 		{
 			$htmlString .= "<option ";
-			if( $id == $thermostatRec['id'] )
+			if( isset($id) && $id == $thermostatRec['id'] )
 			{
 				$htmlString .= "selected ";
 			}

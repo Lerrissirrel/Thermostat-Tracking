@@ -119,7 +119,7 @@ class DailyDetail
 		foreach( $thermostats as $thermostatRec )
 		{
 			$htmlString .= "<option ";
-			if( $id == $thermostatRec['id'] ) $htmlString .= "'selected' ";
+			if( isset($id) && $id == $thermostatRec['id'] ) $htmlString .= "'selected' ";
 			$htmlString .= "value='{$thermostatRec['id']}'>{$thermostatRec['name']}</option>";
 		}
 		$htmlString .= "			</select>";
