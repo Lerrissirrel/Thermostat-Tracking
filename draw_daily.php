@@ -375,8 +375,8 @@ $end_date = strftime( '%Y-%m-%d 23:59:59', strtotime($to_date));			// "2012-07-1
 if( ($show_heat_cycles + $show_cool_cycles + $show_fan_cycles) > 0 )
 {
   /**
-		* This SQL should include cycles that started on the previous night or ended on the
-		*  following morning for any given date.
+		* This SQL includes any cycle that ends or starts within the specified time window.
+		* Cycles that cross the left or right margins get truncated.
 		*
 		* Ought to graphically differentiate those open ended cycles somehow?
 		*/
@@ -389,7 +389,7 @@ if( ($show_heat_cycles + $show_cool_cycles + $show_fan_cycles) > 0 )
           DATE_FORMAT( LEAST( end_time, ? ), '%k' ) AS end_hour,
           TRIM( LEADING '0' FROM DATE_FORMAT( LEAST( end_time, ? ), '%i' ) ) AS end_minute
   FROM {$dbConfig['table_prefix']}hvac_cycles
-  WHERE start_time >= ? AND end_time <= ? AND tstat_uuid = ?
+  WHERE end_time >= ? AND start_time <= ? AND tstat_uuid = ?
   ORDER BY start_time ASC";
 
 /*
@@ -597,6 +597,9 @@ $myPicture->drawLineChart( array( 'DisplayValues' => FALSE, 'DisplayColor' => DI
 	*/
 
 $PixelsPerMinute = (($graphAreaEndX - $graphAreaStartX) / 1440) / $dayCount;  // = 0.54861 (for dayCount = 1)
+// $graphXLastDataPoint = $graphAreaEndX - 30 * $PixelsPerMinute; // this is the number of pixels, to the right of the graph area left margin, to where the last temperature point will be displayed (11:30pm).  Ideally we should be able to display the midnight point, too.  But until then, I've stopped some things from drawing past this point for aesthetic reasons.  
+$graphXLastDataPoint = $graphAreaEndX; // this is the number of pixels, to the right of the graph area left margin, to where the last temperature point will be displayed (12:59pm).  Since we don't display the last points for the last day in the display window (they are shown as the first points of the next day), it looks a bit odd to have some other things display in that last half hour (like the cycles and setpoint).
+
 /**
 	* Assumptions:
 	*  1. The chart X-axis represents 24 hours
@@ -620,6 +623,8 @@ $LeftMargin = $graphAreaStartX;
 if( ($show_heat_cycles + $show_cool_cycles + $show_fan_cycles) > 0 )
 {	// The SQL has already been executed.  Now just draw it.
 
+   // As stated above, it would be nice to adjust the gradient to take into account cycles that started before, or end after, the display window.  In theory the math could be worked out such that the start (or end) color in the gradient is what would be if the whole gradient was drawn.
+
   // The rounded corners look so much better, but the run times are so relatively short that the rounds seldom appear.
   $HeatGradientSettings = array( 'StartR' => 150, 'StartG' =>  50, 'StartB' =>  80, 'Alpha' => 65, 'Levels' => 90, 'BorderR' =>  140, 'BorderG' =>  40, 'BorderB' =>  70 );
   $CoolGradientSettings = array( 'StartR' =>  50, 'StartG' => 150, 'StartB' => 180, 'Alpha' => 65, 'Levels' => 90, 'BorderR' =>   40, 'BorderG' => 140, 'BorderB' => 170 );
@@ -640,6 +645,17 @@ echo '</tr>';
     // 'YYYY-MM-DD HH:mm:00'  There are NO seconds in these data points.
     $cycle_start = $LeftMargin + ((($row['start_day'] * 1440) + ($row['start_hour'] * 60) + $row['start_minute'] ) * $PixelsPerMinute);
     $cycle_end   = $LeftMargin + ((($row['end_day']   * 1440) + ($row['end_hour']   * 60) + $row['end_minute'] )   * $PixelsPerMinute);
+
+    // If this cycle started the day before the display window, we want to start drawing it at 00:00
+    if ($cycle_start < $LeftMargin)
+    {
+       $cycle_start = $LeftMargin;
+    }
+    // If this cycle ends past our display window, we want to clip it at the right most data point
+    if ($cycle_end > $graphXLastDataPoint)
+    {
+       $cycle_end = $graphXLastDataPoint;
+    }
 
     if( $row['system'] == 1 && $show_heat_cycles == 1 )
     { // Heat
