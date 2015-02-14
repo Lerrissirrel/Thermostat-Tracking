@@ -53,7 +53,7 @@ class Compare extends BasicTab
 		foreach( $thermostats as $thermostatRec )
 		{
 			$this->addToTab( "<option " );
-			if( $id == $thermostatRec['id'] )
+			if( isset($id) && $id == $thermostatRec['id'] )
 			{
 				$this->addToTab( "selected " );
 			}
