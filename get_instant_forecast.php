@@ -10,7 +10,7 @@ $log->logInfo( 'get_instant_forecast: start' );
 $lastZIP = '';
 $returnString = '';
 
-if( $weatherConfig['useForecast'] )
+if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherunderground")
 {	// Only check forecast if we're asking for it.
 	try
 	{
@@ -87,7 +87,7 @@ if( $weatherConfig['useForecast'] )
 				}
 				catch( Exception $e )
 				{
-					$log-logError( 'get_instant_forecast: External forecast failed: ' . $e->getMessage() );
+					$log->logError( 'get_instant_forecast: External forecast failed: ' . $e->getMessage() );
 					// Need to add the Alert icon to the sprite map and set relative position in the thermo.css file
 					$returnString = $returnString . "<p><img src='images/Alert.png'/>Presently unable to read forecast.</p>";
 				}

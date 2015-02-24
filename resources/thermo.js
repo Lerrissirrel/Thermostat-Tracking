@@ -102,7 +102,7 @@ function deleteCookies( chart )
 	if( chart == 0 )
 	{	// Clear cookies that remember daily settings
 		setCookie( 'auto_refresh', '', -1 );
-		setCookie( 'chart.daily.setpoint', '', -1 );
+		setCookie( 'chart.daily.showSetpoint', '', -1 );
 		setCookie( 'chart.daily.showHeat', '', -1 );
 		setCookie( 'chart.daily.showCool', '', -1 );
 		setCookie( 'chart.daily.showFan', '', -1 );
@@ -112,7 +112,7 @@ function deleteCookies( chart )
 
 		/* These are left over from the failed experiment to set a background color when a value came from a cookie
 		   The experiment failed because browsers do not let you set styles on ALL the imputs.  Several inherit from the OS
-		document.getElementById('chart.daily.setpoint').className = '';
+		document.getElementById('chart.daily.showSetpoint').className = '';
 		document.getElementById('chart.daily.showHeat').className = '';
 		document.getElementById('chart.daily.showCool').className = '';
 		document.getElementById('chart.daily.showFan').className = '';

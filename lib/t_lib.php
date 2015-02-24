@@ -257,7 +257,7 @@ if( $retry > 0 ) $log->logInfo( "t_lib: getStatData: setting timeout to $newTime
 				{	// Comment out because this message appears even when everything is working!
 					// $log->logError( 't_lib: containsTransient: value was NOT an object!' );
 				}
-				if( $value == -1 )
+				if( gettype($value) != "object" && $value == -1 )
 				{
 					//echo 'WARNING (' . date(DATE_RFC822) . '): ' . $key . " contained a transient\n";
 					$log->logWarn( 't_lib: containsTransient WARNING (' . date(DATE_RFC822) . '): ' . $key . " contained a transient\n" );

@@ -37,14 +37,14 @@ function display_chart_build_and_display( chart, style, table_flag, chart_target
 {
 
 	var show_thermostat_id       = 'id='                          + document.getElementById( 'chart.daily.thermostat' ).value;
-	var daily_setpoint_selection = 'chart.daily.setpoint='        + document.getElementById( 'chart.daily.setpoint' ).checked;
 	var daily_source_selection   = 'chart.daily.source='          + document.getElementById( 'chart.daily.source' ).value;
 	var daily_interval_length    = 'chart.daily.interval.length=' + document.getElementById( 'chart.daily.interval.length' ).value;
 	var daily_interval_group     = 'chart.daily.interval.group='  + document.getElementById( 'chart.daily.interval.group' ).value;
 	var daily_to_date_string     = 'chart.daily.toDate='          + document.getElementById( 'chart.daily.toDate' ).value;
+	var show_setpoint_string     = 'chart.daily.showSetpoint='    + document.getElementById( 'chart.daily.showSetpoint' ).checked;
 	var show_heat_cycle_string   = 'chart.daily.showHeat='        + document.getElementById( 'chart.daily.showHeat' ).checked;
 	var show_cool_cycle_string   = 'chart.daily.showCool='        + document.getElementById( 'chart.daily.showCool' ).checked;
-	var show_fan_cycle_string	   = 'chart.daily.showFan='	        + document.getElementById( 'chart.daily.showFan' ).checked;
+	var show_fan_cycle_string    = 'chart.daily.showFan='	        + document.getElementById( 'chart.daily.showFan' ).checked;
 	var show_outdoor_humid_str   = 'chart.daily.showOutdoorHumidity=' + document.getElementById( 'chart.daily.showOutdoorHumidity' ).checked;
 	var show_indoor_humid_str    = 'chart.daily.showIndoorHumidity='  + document.getElementById( 'chart.daily.showIndoorHumidity' ).checked;
 
@@ -61,7 +61,7 @@ function display_chart_build_and_display( chart, style, table_flag, chart_target
 		// This space intentionally left blank (actually I don't recall why it was left blank, but everything seems to work)
 	}
 
-	url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + daily_setpoint_selection + '&' + table_flag + '&' +
+	url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + show_setpoint_string + '&' + table_flag + '&' +
 							 daily_interval_length  + '&' + daily_interval_group   + '&' + daily_to_date_string  + '&' +
 							 show_heat_cycle_string	+ '&' + show_cool_cycle_string + '&' + show_fan_cycle_string + '&' +
 							 show_outdoor_humid_str	+ '&' + show_indoor_humid_str	 + '&' +
@@ -119,7 +119,7 @@ class DailyDetail
 		foreach( $thermostats as $thermostatRec )
 		{
 			$htmlString .= "<option ";
-			if( $id == $thermostatRec['id'] ) $htmlString .= "'selected' ";
+			if( isset($id) && $id == $thermostatRec['id'] ) $htmlString .= "'selected' ";
 			$htmlString .= "value='{$thermostatRec['id']}'>{$thermostatRec['name']}</option>";
 		}
 		$htmlString .= "			</select>";
@@ -132,16 +132,16 @@ class DailyDetail
 		$htmlString .= "			</select>";
 
 		// Show or hide the display of the setpoint temperatures.
-		$htmlString .= "&nbsp;<input type='checkbox' id='chart.daily.setpoint' name='chart.daily.setpoint' onChange='javascript: toggle_daily_flag( \'chart.daily.setpoint\' );'/> Set Point";
+		$htmlString .= "&nbsp;<input type='checkbox' id='chart.daily.showSetpoint' name='chart.daily.showSetpoint' onChange='javascript: toggle_daily_flag( \"chart.daily.showSetpoint\" );'/> Set Point";
 
 		// Show or hide the HVAC run times
-		$htmlString .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; showing Heat<input type='checkbox' id='chart.daily.showHeat' name='chart.daily.showHeat' onChange='javascript: toggle_daily_flag( \'chart.daily.showHeat\' );'/>";
-		$htmlString .= "&nbsp;Cool<input type='checkbox' id='chart.daily.showCool' name='chart.daily.showCool' onChange='javascript: toggle_daily_flag( \'chart.daily.showCool\' );'/>";
-		$htmlString .= "&nbsp;Fan<input type='checkbox' id='chart.daily.showFan'	name='chart.daily.showFan'	onChange='javascript: toggle_daily_flag( \'chart.daily.showFan\' );'/> cycles";
+		$htmlString .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; showing Heat<input type='checkbox' id='chart.daily.showHeat' name='chart.daily.showHeat' onChange='javascript: toggle_daily_flag( \"chart.daily.showHeat\" );'/>";
+		$htmlString .= "&nbsp;Cool<input type='checkbox' id='chart.daily.showCool' name='chart.daily.showCool' onChange='javascript: toggle_daily_flag( \"chart.daily.showCool\" );'/>";
+		$htmlString .= "&nbsp;Fan<input type='checkbox' id='chart.daily.showFan'	name='chart.daily.showFan'	onChange='javascript: toggle_daily_flag( \"chart.daily.showFan\" );'/> cycles";
 
 		// Show or hide the humidity.
-		$htmlString .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; humidity Indoor<input type='checkbox' id='chart.daily.showIndoorHumidity' name='chart.daily.showIndoorHumidity' onChange='javascript: toggle_daily_flag( \'chart.daily.showIndoorHumidity\' );'/>";
-		$htmlString .= "&nbsp;Outdoor<input type='checkbox' id='chart.daily.showOutdoorHumidity' name='chart.daily.showOutdoorHumidity' onChange='javascript: toggle_daily_flag( \'chart.daily.showOutdoorHumidity\' );'/>";
+		$htmlString .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; humidity Indoor<input type='checkbox' id='chart.daily.showIndoorHumidity' name='chart.daily.showIndoorHumidity' onChange='javascript: toggle_daily_flag( \"chart.daily.showIndoorHumidity\" );'/>";
+		$htmlString .= "&nbsp;Outdoor<input type='checkbox' id='chart.daily.showOutdoorHumidity' name='chart.daily.showOutdoorHumidity' onChange='javascript: toggle_daily_flag( \"chart.daily.showOutdoorHumidity\" );'/>";
 
 		// Option to clear preferences/cookies
 		$htmlString .= "<input type='button' onClick='javascript: deleteCookies(0);' value='Un-save settings' style='float: right;'>";	// It floats too far to the right!
@@ -203,9 +203,9 @@ $htmlString .= "<div id='daily_temperature_table' class='status daily_temperatur
 		// In JavaScript, a literal/string value of "false" is a string of non zero length and so it tests as logically true unless you look for the literal string "true"
 
 		// Restore user preference/cookie for showing/hiding setpoints
-		$htmlString .= "if( getCookie('chart.daily.setpoint') == 'true' )";
+		$htmlString .= "if( getCookie('chart.daily.showSetpoint') == 'true' )";
 		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.setpoint').checked = true;";
+		$htmlString .= "	document.getElementById('chart.daily.showSetpoint').checked = true;";
 		$htmlString .= "}";
 
 		// Restore user preference/cookie for showing/hiding AC operation
@@ -224,6 +224,18 @@ $htmlString .= "<div id='daily_temperature_table' class='status daily_temperatur
 		$htmlString .= "if( getCookie('chart.daily.showFan') == 'true' )";
 		$htmlString .= "{";
 		$htmlString .= "	document.getElementById('chart.daily.showFan').checked = true;";
+		$htmlString .= "}";
+
+		// Restore user preference/cookie for showing/hiding indoor humidity
+		$htmlString .= "if( getCookie('chart.daily.showIndoorHumidity') == 'true' )";
+		$htmlString .= "{";
+		$htmlString .= "	document.getElementById('chart.daily.showIndoorHumidity').checked = true;";
+		$htmlString .= "}";
+
+		// Restore user preference/cookie for showing/hiding outdoor humidity
+		$htmlString .= "if( getCookie('chart.daily.showOutdoorHumidity') == 'true' )";
+		$htmlString .= "{";
+		$htmlString .= "	document.getElementById('chart.daily.showOutdoorHumidity').checked = true;";
 		$htmlString .= "}";
 
 
