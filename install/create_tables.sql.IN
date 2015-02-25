@@ -36,13 +36,6 @@ CREATE TABLE IF NOT EXISTS `thermo2__temperatures` (
   PRIMARY KEY `id_date` (`tstat_uuid`,`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `thermo2__setpoints` (
-  `id` tinyint(3) unsigned NOT NULL,
-  `set_point` decimal(5,2) DEFAULT NULL,
-  `switch_time` datetime NOT NULL,
-  KEY `id` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
 CREATE TABLE IF NOT EXISTS `thermo2__time_index` (
   `time` time NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -98,7 +91,7 @@ INSERT INTO `thermo2__time_index` (`time`) VALUES
 ('23:30:00');
 
 CREATE TABLE IF NOT EXISTS `thermo2__thermostats` (
-  `id` int(2) unsigned NOT NULL AUTO_INCREMENT,
+  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
   `tstat_uuid` varchar(15) NULL,
   `model` varchar(10) NULL,
   `fw_version` varchar(10) NULL,
@@ -108,6 +101,14 @@ CREATE TABLE IF NOT EXISTS `thermo2__thermostats` (
   `description` varchar(254) NULL,
   PRIMARY KEY `id` (`id`),
   INDEX `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `thermo2__setpoints` (
+  `id` tinyint(3) unsigned NOT NULL,
+  `set_point` decimal(5,2) DEFAULT NULL,
+  `switch_time` datetime NOT NULL,
+  KEY `id` (`id`),
+  CONSTRAINT `thermo2__setpoints_ibfk_1` FOREIGN KEY (`id`) REFERENCES `thermo2__thermostats` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.154','Downstairs','CT30');
