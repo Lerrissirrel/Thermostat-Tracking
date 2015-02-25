@@ -36,7 +36,7 @@ $ZIP = '90210';
 	*/
 $weatherConfig = array(
 	'useWeather'  => TRUE,											// TRUE, FALSE (Flag to use external temperature for all stats)
-	'useForecast' => TRUE,											// TRUE, FALSE (Flag to show forecast on dashboard))
+	'useForecast' => TRUE,											// TRUE, FALSE (Flag to show forecast on dashboard.  Currently only supported for weatherunderground))
 	'type'    => 'weatherunderground',			// weatherunderground, noaa, weatherbug
 	'units'   => 'F',												// F, C
 	'api_key' => '0000000000000000',				// Registered API key
