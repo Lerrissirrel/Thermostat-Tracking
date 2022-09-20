@@ -800,12 +800,13 @@ if( $show_setpoint == 1 )
 	}
 
 	/** Draw the last setpoint horizontal line but first determine how far it needs to be drawn
-	 * If the last switch_time and the current time are the same day then only draw up to the
-	 * current time.  Otherwise, draw to the 23:59:59 marker.
+	 * If the "to_date" (the last day we're drawing) is either today, or in the future, we will stop this segment at the
+	 * current time.  Otherwise, it means we're showing a date range that is wholly in the past so draw to the right most 23:59:59 marker.
 	 */
 	$now = date_create();
+	$to_date_tmp = date_create($to_date);
 	$interval = $prev_switch_time->diff($now);
-	if( $prev_switch_time->format('Y-m-d') == $now->format('Y-m-d') )
+	if( $to_date_tmp->format('Y-m-d') >= $now->format('Y-m-d') )
 	{
 	   // Note no reason to include days here, since we just verified that we're within the same day
 	   $end_px = $start_px + ( $interval->format('%h') * 60 + $interval->format('%i') ) * $PixelsPerMinute;
