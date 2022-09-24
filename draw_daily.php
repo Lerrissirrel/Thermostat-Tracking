@@ -312,11 +312,11 @@ foreach( $days as $show_date )
 
 			if( $show_indoor_humidity == 1 )
 			{
-				$MyData->addPoints( ($row['indoor_humidity'] == 'VOID' ? VOID : $row['indoor_humidity']), 'Indoor Humidity' );
+				$MyData->addPoints( (($row['indoor_humidity'] == 'VOID' || $row['indoor_humidity'] == '-1.00') ? VOID : $row['indoor_humidity']), 'Indoor Humidity' );
 			}
 			if( $show_outdoor_humidity == 1 )
 			{
-				$MyData->addPoints( ($row['outdoor_humidity'] == 'VOID' ? VOID : $row['outdoor_humidity']), 'Outdoor Humidity' );
+				$MyData->addPoints( (($row['outdoor_humidity'] == 'VOID' || $row['outdoor_humidity'] == '-1.00') ? VOID : $row['outdoor_humidity']), 'Outdoor Humidity' );
 			}
 
 		}
