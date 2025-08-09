@@ -34,15 +34,21 @@ function loadDateData( chart )
 	switch( chart )
 	{
 		case 'daily':
-			if( getCookie( 'chart.daily.interval.length' ) ) document.getElementById( 'chart.daily.interval.length' ).value = getCookie( 'chart.daily.interval.length' );	// How many?
-			if( getCookie( 'chart.daily.interval.group' ) )  document.getElementById( 'chart.daily.interval.group' ).value  = getCookie( 'chart.daily.interval.group' );	// Days, weeks, months, years
-			if( getCookie( 'chart.daily.toDate' ) )          document.getElementById( 'chart.daily.toDate' ).value          = getCookie( 'chart.daily.toDate' );					// Ending on date
+	    if( getCookie( 'chart.daily.interval.length' ) )
+		document.getElementById( 'chart.daily.interval.length' ).value = getCookie( 'chart.daily.interval.length' );	// How many?
+	    if( getCookie( 'chart.daily.interval.group' ) )
+		document.getElementById( 'chart.daily.interval.group' ).value  = getCookie( 'chart.daily.interval.group' );	// Days, weeks, months, years
+	    if( getCookie( 'chart.daily.toDate' ) )
+		document.getElementById( 'chart.daily.toDate' ).value          = getCookie( 'chart.daily.toDate' );					// Ending on date
 		break;
 		
 		case 'historic':
-			if( getCookie( 'chart.history.interval.length' ) ) document.getElementById( 'chart.history.interval.length' ).value = getCookie( 'chart.history.interval.length' );	// How many?
-			if( getCookie( 'chart.history.interval.group' ) )  document.getElementById( 'chart.history.interval.group' ).value  = getCookie( 'chart.history.interval.group' );	// Days, weeks, months, years
-			if( getCookie( 'chart.history.toDate' ) )          document.getElementById( 'chart.history.toDate' ).value          = getCookie( 'chart.history.toDate' );					// Ending on date
+	    if( getCookie( 'chart.history.interval.length' ) )
+		document.getElementById( 'chart.history.interval.length' ).value = getCookie( 'chart.history.interval.length' );	// How many?
+	    if( getCookie( 'chart.history.interval.group' ) )
+		document.getElementById( 'chart.history.interval.group' ).value  = getCookie( 'chart.history.interval.group' );	// Days, weeks, months, years
+	    if( getCookie( 'chart.history.toDate' ) )
+		document.getElementById( 'chart.history.toDate' ).value          = getCookie( 'chart.history.toDate' );					// Ending on date
 		break;
 		
 		default:
@@ -140,49 +146,59 @@ function deleteCookies( chart )
 // Expected values are -1 or +1
 function interval( direction )
 {
-	var valueString = document.getElementById( 'chart.daily.toDate' ).value;	// Hold in intermediate variable for debugging
-	var stupidDate = new Date( valueString );	// This date is stupid because '2014-02-06' becomes '2014-02-05 18:00'
-	var toDate = new Date( stupidDate.getTime() + (stupidDate.getTimezoneOffset()*60*1000) );	// The time zone offset is presented in minutes
-	
-	var oneDay = 86400000;  // 24*60*60*1000 (milliseconds)
-	var multiplier;
-	switch( document.getElementById( 'chart.daily.interval.group' ).value )
-	{
-		case '1':
-			// Weeks
-			multiplier = 7;
-		break;
-		case '2':
-			// Months.  Yes, technically depending on WHICH month it is, this should be a different length.
-			multiplier = 30;
-		break;
-		case '3':
-			// Years
-			multiplier = 365;
-		break;
-		default:
-			// Days and catchall
-			multiplier = 1;
-		
-	}
-	var intervalLength = document.getElementById( 'chart.daily.interval.length' ).value * (oneDay * multiplier);
-	var nextDate;
-	if( direction == 1 )
-	{	// Compute next interval ending date
-		nextDate = new Date( toDate.getTime() + intervalLength );
-	}
-	else
-	{	// Compute previous interval ending date
-		nextDate = new Date( toDate.getTime() - intervalLength );
-	}
-	var monthString = nextDate.getMonth() + 1; // Because getMonth() is zero based
-	if( monthString < 10 ) monthString = '0' + monthString;
-	var dateString = nextDate.getDate();
-	if( dateString < 10 ) dateString = '0' + dateString;
-	valueString = '' + nextDate.getFullYear() + '-' + monthString + '-' + dateString; 	// Hold in intermediate variable for debugging
-	document.getElementById( 'chart.daily.toDate' ).value = valueString;
-	
-	display_chart( 'daily', 'chart' );	// Now go show the new interval
+    var valueString = document.getElementById( 'chart.daily.toDate' ).value;	// Hold in intermediate variable for debugging
+    var stupidDate = new Date( valueString );	// This date is stupid because '2014-02-06' becomes '2014-02-05 18:00'
+    var toDate = new Date( stupidDate.getTime() + (stupidDate.getTimezoneOffset()*60*1000) );	// The time zone offset is presented in minutes
+    
+    var oneDay = 86400000;  // 24*60*60*1000 (milliseconds)
+    var multiplier;
+    
+    switch( document.getElementById( 'chart.daily.interval.group' ).value )
+    {
+	case '1':
+  	  // Weeks
+	  multiplier = 7;
+	break;
+	case '2':
+	  // Months.  Yes, technically depending on WHICH month it is, this should be a different length.
+	  multiplier = 30;
+	break;
+	case '3':
+	  // Years
+	  multiplier = 365;
+	break;
+	default:
+	  // Days and catchall
+	  multiplier = 1;
+    }
+    var intervalLength = document.getElementById( 'chart.daily.interval.length' ).value * (oneDay * multiplier);
+    var nextDate;
+    if( direction == 1 )
+    {	// Compute next interval ending date
+	nextDate = new Date( toDate.getTime() + intervalLength );
+    }
+    else
+    {	// Compute previous interval ending date
+	nextDate = new Date( toDate.getTime() - intervalLength );
+    }
+    var monthString = nextDate.getMonth() + 1; // Because getMonth() is zero based
+    if( monthString < 10 )
+    {
+	monthString = '0' + monthString;
+    }
+    
+    var dateString = nextDate.getDate();
+    
+    if( dateString < 10 )
+    {
+	dateString = '0' + dateString;
+    }
+    
+    valueString = '' + nextDate.getFullYear() + '-' + monthString + '-' + dateString; 	// Hold in intermediate variable for debugging
+    
+    document.getElementById( 'chart.daily.toDate' ).value = valueString;
+    
+    display_chart( 'daily', 'chart' );	// Now go show the new interval
 }
 
 
@@ -195,6 +211,11 @@ function processAjaxResponse( doc, action )
 
 	switch( action )
 	{
+		case 'get_year_range':
+		{
+			set_compare_year_dropdowns(doc.responseText);
+		}
+		break;
 		case 'conditions':
 			document.getElementById( 'status' ).innerHTML = doc.responseText;
 		break;
@@ -227,6 +248,9 @@ function update( action )
 	// Need to add the Wheels icon to the sprite map and set relative position in the thermo.css file
 	switch( action )
 	{
+		case 'get_year_range':
+			// nothing to do here?  In other cases this spot is used to indicate in the page that we're acting on something
+		break;
 		case 'conditions':
 			document.getElementById( 'status' ).innerHTML = "<p class='status'><table><tr><td><img src='images/img_trans.gif' width='1' height='1' class='wheels' /></td><td>Looking up present status and conditions. (This may take some time)</td></tr></table></p>";
 		break;
@@ -273,6 +297,17 @@ function update( action )
 	
 	switch( action )
 	{
+		case 'get_year_range':
+			var show_thermostat_id = 'id=' + document.getElementById( 'chart.compare.thermostat' ).value;
+			var no_cache_string = 'nocache=' + Math.random();
+			var urlString;
+
+			urlString = 'get_year_range.php?'+show_thermostat_id+"&"+no_cache_string;
+			//console.log(urlString);
+			xmlDoc.open( 'GET', urlString, true );
+			xmlDoc.setRequestHeader('Accept', 'application/json');
+		break;
+
 		case 'conditions':
 			xmlDoc.open( 'GET', 'get_instant_status.php', true );
 		break;
@@ -302,6 +337,42 @@ function backup()
 {
 	//alert( 'Not imlemented yet.' );
 	update( 'backup' );	// Need a more accurate name than "update" if I'm going to use it for this too!
+}
+
+function set_compare_year_dropdowns(response)
+{
+   const selectElement1 = document.getElementById('chart.compare.firstDate');
+   const selectElement2 = document.getElementById('chart.compare.secondDate');
+
+   var year_array = JSON.parse(response);
+   var i = 0;
+   var L = selectElement1.options.length - 1, K = selectElement2.options.length -1;
+
+   for(i = L; i >= 0; i--) {
+      selectElement1.remove(i);
+   }
+   for(i = K; i >= 0; i--) {
+      selectElement2.remove(i);
+   }
+
+  for ( i = Number(year_array['earliest_year']) ; i <= Number(year_array['latest_year']) ; i++)
+  {
+     // First date can't be last possible year as we have no later year to compare to
+     if (i != Number(year_array['latest_year']))
+     {
+       const newOption1 = document.createElement('option');
+       newOption1.value = i;
+       newOption1.text = i;
+       selectElement1.appendChild(newOption1);
+
+     }
+     const newOption2 = document.createElement('option');
+     newOption2.value = i;
+     newOption2.text = i;
+     selectElement2.appendChild(newOption2);
+  }
+  adjust_year_dropdowns("foo");
+
 }
 
 function switch_style( css_title )
