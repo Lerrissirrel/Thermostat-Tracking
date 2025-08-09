@@ -119,7 +119,8 @@ $send_eod_email_pw = '';
     |   +-- html
     |   +-- js
     |   +-- php
-    |       +-- c-pChart
+    |       +-- c-pChart (link to latest c-pchart)
+    |       +-- c-pchart-3.0.17
     +-- thermo2
         +-- backup
         +-- images
