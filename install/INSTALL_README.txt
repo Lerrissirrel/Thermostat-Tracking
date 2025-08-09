@@ -2,6 +2,7 @@ Requirements:
 PHP 5.2.4 or later
 Mysql
 c-pChart
+KLogger (Already included as KLogger.php.  I hope Katzgrau doesn't mind - this version of thermo needs an older version of KLogger)
 
 Install:
 1. Place the folder somewhere in your web root.
