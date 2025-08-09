@@ -23,4 +23,4 @@ cd ${LOC}
 
 NOW=`date "+%Y-%m-%d %H:%M:%S"`
 
-/usr/local/bin/php ${LOC}/thermo_update_status.php
+/usr/bin/php ${LOC}/thermo_update_status.php
