@@ -18,11 +18,22 @@ function display_historic_chart()
 
 	var no_cache_string = 'nocache=' + Math.random(); // Browsers are very clever with image caching.	That cleverness breaks this web page's function.
 
-	var url_string = 'draw_weekly.php?' + show_thermostat_id + '&' + show_indoor + '&' + show_hvac_runtime + '&' + interval_measure_string + '&' + interval_length_string + '&' + history_to_date_string	+ '&' + no_cache_string;
+	var window_width             = 'chart.history.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+	var window_height            = 'chart.history.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+
+	var url_string = 'draw_weekly.php?' + show_thermostat_id + '&' + show_indoor + '&' + show_hvac_runtime + '&' + interval_measure_string + '&' + interval_length_string + '&' + history_to_date_string	+ '&' + no_cache_string + '&' + window_width + '&' + window_height;
 	console.log( url_string );
 	document.getElementById( 'history_chart' ).src = url_string;
 }
 
+function foo_save_window_size()
+{
+   var window_width             = 'chart.history.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+   var window_height            = 'chart.history.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+
+   display_historic_chart();
+
+}
 
 </script>
 
@@ -82,7 +93,7 @@ class History
 		$htmlString .= "		<div class='content'>";
 		$htmlString .= "			<br>";
 		$htmlString .= "			<div class='thermo_chart'>";
-		$htmlString .= "				<img id='history_chart' src='img/need_default.png' alt='History Graph' title='History Graph'>";
+		$htmlString .= "				<img id='history_chart' class='daily_temp_chart' src='images/need_default.png' alt='History Graph' title='History Graph'>";
 		$htmlString .= "			</div>";
 
 		// These initializations must fall AFTER the declaration of various HTML DOM variables
