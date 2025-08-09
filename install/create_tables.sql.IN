@@ -106,11 +106,14 @@ CREATE TABLE IF NOT EXISTS `thermo2__thermostats` (
 CREATE TABLE `thermo2__setpoints` (
   `id` tinyint(3) unsigned NOT NULL,
   `set_point` decimal(5,2) DEFAULT NULL,
+  `mode` tinyint(4) unsigned DEFAULT NULL,
   `switch_time` datetime NOT NULL,
   KEY `id` (`id`),
   CONSTRAINT `thermo2__setpoints_ibfk_1` FOREIGN KEY (`id`) REFERENCES `thermo2__thermostats` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.154','Downstairs','CT30');
-INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.155','Upstairs','CT30');
+/* Have one INSERT line for each of your thermostats
+INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.100','Bedroom','CT30');
+INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.101','Kitchen','CT30');
+INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.102','Basement','CT30');
 
