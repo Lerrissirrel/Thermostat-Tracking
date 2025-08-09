@@ -14,12 +14,9 @@ grant all on therm.* to 'therm'@'localhost';
 
 3. Create the tables
 
-Modify the install/create_tables.sql
+At the end of install/create_tables.sql, enter statements for each thermostat you wish to configure:
 
-At the end, enter statements for each thermostat you wish to configure:
-
-INSERT INTO `thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.171',
-'Downstairs','CT30');
+INSERT INTO `thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.171','Downstairs','CT30');
 
 Then create the tables and import the data:
 Example:
