@@ -3,13 +3,25 @@ require_once( 'common.php' );
 
 // Modify the font path for the GD library - because graphic renders are lame?
 // Must use absolute and not relative paths.
-$pChart_fontpath = realpath( '../common/php/pChart/fonts' );	// pCharts default font library
-$my_fontpath = realpath( 'lib/fonts' );														// font path for this application
-putenv( 'GDFONTPATH='.$pChart_fontpath.PATH_SEPARATOR.$my_fontpath );
+$my_fontpath = realpath( '../../common/php/pChart/fonts' );														// font path for this application
+putenv( 'GDFONTPATH='.$my_fontpath );
 
-require_once 'pChart/class/pData.class.php';
-require_once 'pChart/class/pDraw.class.php';
-require_once 'pChart/class/pImage.class.php';
+require_once ('c-pChart/constants.php');
+require_once ('c-pChart/src/BaseDraw.php');
+require_once ('c-pChart/src/Draw.php');
+require_once ('c-pChart/src/Cache.php');
+require_once ('c-pChart/src/Image.php');
+require_once ('c-pChart/src/Data.php');
+require_once ('c-pChart/src/Chart/Bubble.php');
+require_once ('c-pChart/src/Chart/Indicator.php');
+require_once ('c-pChart/src/Chart/Pie.php');
+require_once ('c-pChart/src/Chart/Radar.php');
+require_once ('c-pChart/src/Chart/Scatter.php');
+require_once ('c-pChart/src/Chart/Split.php');
+require_once ('c-pChart/src/Chart/Spring.php');
+require_once ('c-pChart/src/Chart/Stock.php');
+require_once ('c-pChart/src/Chart/Surface.php');
+
 
 // Replaces chart with anti-hacking graphic (usually when web user has used a mal-formed date string)
 function bobby_tables()
