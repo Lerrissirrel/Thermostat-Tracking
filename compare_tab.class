@@ -162,7 +162,7 @@ class Compare extends BasicTab
 
 		// Place chart area on tab
 		$this->addToTab( "			<div class='thermo_chart'>" );
-		$this->addToTab( "				<img id='compare_chart' src='images/need_default.png' alt='Year-over-year comparison graph' title='Year-over-year comparison'>" );
+		$this->addToTab( "				<img id='compare_chart' class='daily_temp_chart' src='images/need_default.png' alt='Year-over-year comparison graph' title='Year-over-year comparison'>" );
 		$this->addToTab( "			</div>" );
 
 		// Draw the chart
