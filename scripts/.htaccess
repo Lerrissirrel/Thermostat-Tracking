@@ -2,12 +2,10 @@
 
 DirectoryIndex index.html
 
-<Files *>
-order deny,allow
-
+Require all denied
 # This prevents web browsers or spiders from seeing your .htaccess directives:
 <Files .htaccess>
-deny from all
+Require all denied
 </Files>
 
 # End of file
