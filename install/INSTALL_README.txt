@@ -1,6 +1,7 @@
 Requirements:
 PHP 5.2.4 or later
 Mysql
+c-pChart
 
 Install:
 1. Place the folder somewhere in your web root.
@@ -31,6 +32,9 @@ mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql
 
 Set the zip code and the type of external weather (temperature/humidity) API to use.
 
-6. Manually run scripts/thermo_update_status.php and scripts/thermo_update_temps.php
+6. Install c-pChart from https://github.com/szymach/c-pchart in ../../common/php/c-pChart
 
-7. Add the scripts to the cron job/scheduled tasks. See install/create_schedule
+7. Manually run scripts/thermo_update_status.php and scripts/thermo_update_temps.php
+
+8. Add the scripts to the cron job/scheduled tasks. See install/create_schedule
+
