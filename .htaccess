@@ -1,56 +1,22 @@
-# Updated 28 June 2013
-
-ServerSignature Off
-
-<IfModule mod_autoindex.c>
-IndexIgnore *
-</IfModule>
-
-# Disable Directory Listings in this Directory and Subdirectories
-Options All -Indexes
+# Updated July 27, 2012
 
 DirectoryIndex index.php
 
-#<Files *>
-#order deny,allow
-
 <Files "config.php">
-Order Allow,Deny
-Deny from All
+Require all denied
 </Files>
 
 <Files "common.php">
-Order Allow,Deny
-Deny from All
+Require all denied
 </Files>
 
+<Files " get_year_range.php">
+Require all denied
+</Files>
 
 # This prevents web browsers or spiders from seeing your .htaccess directives:
 <Files .htaccess>
-deny from all
+Require all denied
 </Files>
-
-# The goal is to take an URL ending in "index.php" or \ and rewrite it to index.php#daily to make that the default landing page.
-<IfModule mod_rewrite.c> 
-###Options +FollowSymLinks  # No matter what you may read ANYWHERE, this is NOT needed.
-RewriteEngine On
-#RewriteBase /thermo2/
-#RewriteCond %{REQUEST_URI} ^(.*)\#(.*)$
-#RewriteRule ^(.*)\#(.*)$ %{REQUEST_URI}[L]
-#RewriteRule ^$ index.php#daily [NE,R,L]
-#RewriteRule ^index\.php$ index.php#daily [NE,R,L]
-
-#RewriteRule ^(.*).php$ %{REQUEST_URI}#daily [NE,R,L]
-# The problem is that it tries to rewrite EVERY hit and so you get a redirect loop and the page will not load.
-</IfModule>
-
-
-# Deny access to all . files (may supercede the .htaccess block above, but that is OK)
-RedirectMatch 403 /\..*$
-
-# Custom error file
-ErrorDocument 404 /common/html/404page.html
-ErrorDocument 403 /common/html/403page.html
-
 
 # End of file

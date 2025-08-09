@@ -6,6 +6,14 @@ body
 	background-size: contain;
 	background-repeat: repeat-y;
 	text-align: center;
+	height: 100%;
+	margin: 0px 0px 0px 0px;
+}
+
+#bigbox_html
+{
+	height: 100%;
+	width: 100%;
 }
 
 /** Absolutely everything that appeas on the ENTIRE web page should be in this big box
@@ -13,7 +21,9 @@ body
 	*/
 #bigbox
 {
-	width: 1000px;
+	width: 90%; 
+	height: 90%;
+	float: middle;
 	margin: 0px auto;
 }
 
@@ -26,23 +36,22 @@ body
 	*/
 div.status
 {
-	display: inline-block; 
 	margin: 0px;
 	margin-left: 50px;
 	float: left;
-	width: 400px;
-	height: 250px;
+	width: 40%;
+	height: 80%;
 	overflow-y: auto;
 }
 div.status p
 {
-	padding: 0px;
-	top: -24px;
+	padding: 10px;
 	vertical-align: middle;
 }
 div.forecast
 {
 	margin: 0px;
+	padding: 10px;
 	margin-right: 50px;
 	float: right;
 }
@@ -102,22 +111,39 @@ div.status img.wheels
 	*/
 div.thermo_chart
 {
+
 	position: relative;
-	height: 430px; 
-	width: 900px; 
+	width: 98%;   
+	height: 100%;  /* Don't specify a height, just let it shrink to surround the chart itself */
+	margin-top: 0px;
 	margin-left: auto;
 	margin-right: auto;
+	overflow: auto;
+	display: table;
+}
+
+img.daily_temp_chart
+{
+	display: block;
+	margin: auto;
+	opacity: 1;
+	overflow-y: auto;
+	box-sizing: border-box;
+	display: table-row;
 }
 
 div.daily_temperature_table
 {
 	position: relative;
-	height: 113px;
+	position: block;
+	height: 0px;
 	width: 540px;
 	float: right;
 	background-image: none;
 	overflow-y: auto;
-	overflow-x: hidden;
+	display: inline-block;
+	box-sizing: border-box;
+	margin: 5px;
 }
 
 table.thermo_table

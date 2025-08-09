@@ -52,7 +52,8 @@ class ExternalWeather
 					$log->logError( 'ExternalWeather: getOutdoorWeather: Cannot proceed without NOAA API location.' );
 					throw new ExternalWeather_Exception( 'NOAA API loc not set' );
 				}
-				if( !$doc = file_get_contents( $this->config['api_loc'] ) )
+				ini_set('user_agent','Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17');
+				if( ($doc = file_get_contents( $this->config['api_loc'] )) == FALSE )
 				{
 					$log->logError( 'ExternalWeather: getOutdoorWeather: NOAA API returned no data.' );
 					throw new ExternalWeather_Exception( 'Could not contact noaa xml' );

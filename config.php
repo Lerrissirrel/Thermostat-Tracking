@@ -119,41 +119,8 @@ $send_eod_email_pw = '';
     |   +-- html
     |   +-- js
     |   +-- php
-    |       +-- pChart -> pChart2.1.4
-    |       +-- pChart2.1.3
-    |       |   +-- cache
-    |       |   +-- class
-    |       |   +-- data
-    |       |   +-- examples
-    |       |   |   +-- delayedLoader
-    |       |   |   +-- imageMap
-    |       |   |   |   +-- scripts
-    |       |   |   |   +-- tmp
-    |       |   |   +-- pictures
-    |       |   |   +-- resources
-    |       |   |   +-- sandbox
-    |       |   |       +-- graphix
-    |       |   |       +-- includes
-    |       |   |       +-- script
-    |       |   +-- fonts
-    |       |   +-- palettes
-    |       +-- pChart2.1.4
-    |           +-- cache
-    |           +-- class
-    |           +-- data
-    |           +-- examples
-    |           |   +-- delayedLoader
-    |           |   +-- imageMap
-    |           |   |   +-- scripts
-    |           |   |   +-- tmp
-    |           |   +-- pictures
-    |           |   +-- resources
-    |           |   +-- sandbox
-    |           |       +-- graphix
-    |           |       +-- includes
-    |           |       +-- script
-    |           +-- fonts
-    |           +-- palettes
+    |       +-- c-pChart (link to latest c-pchart)
+    |       +-- c-pchart-3.0.17
     +-- thermo2
         +-- backup
         +-- images

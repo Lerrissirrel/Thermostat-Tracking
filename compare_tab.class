@@ -1,9 +1,83 @@
-<script type='text/javascript'>
+<script>
 
+// When we first load there is a default choice for the thermostat, getYearRange will go find the valid year ranges for its hvac data and use it
+// to populate the two year drop downs for comparison
+window.onload = function() {
+   getYearRange();
+}
+
+// This gets called when first populating the two year drop downs or when a selection has been made in one or the other
+// The first dropdown will always show all possible years except the most recent which only shows in the second drop down
+// The second dropdown dynamically changes based on the first drop down to only show years later than that selected by the first one
+//   Note it will automatically change the second drop down if you make a choice in the first drop down that invalidates the currently
+//   selected year in the second drop down.  E.g. In a range from 2010-2020 if the second drop down is currently 2015 and I select 2018
+//   in the first drop down, the second drop down will change to 2019 and only show options for 2019 and 2020.
+
+function adjust_year_dropdowns(value)
+{
+
+   var dropdown1 = document.getElementById("chart.compare.firstDate");
+   var dropdown1val = document.getElementById("chart.compare.firstDate").value;
+
+   var dropdown2 = document.getElementById("chart.compare.secondDate");
+   var dropdown2val = document.getElementById("chart.compare.secondDate").value;
+   var highest_dd2 = 0;
+
+   for (var i = 0; i < dropdown2.length; i++) 
+   {
+       if (highest_dd2 < dropdown2.options[i].value)
+       {
+          highest_dd2 = dropdown2.options[i].value;
+       }
+
+       if (dropdown2.options[i].value < dropdown1val)
+       {
+           // If the second drop down's year is lower than the selected first dropdown, we don't want to offer it as an option so set it to "none"
+           dropdown2.options[i].style.display = "none";
+       }
+       else if (dropdown2.options[i].value == dropdown1val)
+       {
+          // We also don't want to show the value that is the same as the first drop down's current value
+          dropdown2.options[i].style.display = "none";
+
+          // Additionally we want to make sure we don't leave the second drop down as the same, or lower, value as drop down 1
+          // so if our starting state was the user trying to set the first drop down to a higher year than drop down 2, we
+          // automatically push drop down 2's date to the year after drop down 1.  Double check there IS another year.  If not
+          // just set drop down 2 to blank.  The use will have to adjust drop down 1 lower first.
+          // Note that drop down 1 should only be allowed to go up to the "drop down 2 most recent year - 1"
+          if (dropdown1val >= dropdown2val)
+          {
+             if (i + 1 < dropdown2.length)
+             {
+               document.getElementById("chart.compare.secondDate").value = dropdown2.options[++i].value;
+             }
+             else
+             {
+               document.getElementById("chart.compare.secondDate").value = "";
+             }
+          }
+       }
+       else 
+       {
+          dropdown2.options[i].style.display = "block";
+       }
+   }
+   // We figured out the latest year in drop down 2 up above.  Don't show any options from drop down 1 that are equal, or higher than that year
+   for (var i = 1; i < dropdown1.length; i++) 
+   {
+      if (dropdown1.options[i].value >= highest_dd2)
+      {
+         dropdown1.options[i].style.display = "none";
+      }
+   }
+}
 
 function displayCompareChartExec()
 {
-	var show_thermostat_id = 'id=' + document.getElementById( 'chart.compare.thermostat' ).value;
+	var show_thermostat_id = 'id='                + document.getElementById( 'chart.compare.thermostat' ).value;
+	var show_compare_mode  = 'show_compare_mode=' + document.getElementById( 'chart.compare.mode' ).value;
+	var show_year_1        = 'show_year_1='       + document.getElementById( 'chart.compare.firstDate' ).value;
+	var show_year_2        = 'show_year_2='       + document.getElementById( 'chart.compare.secondDate' ).value;
 
 	// Browsers are very clever with image caching.	In this case it breaks the web page function.
 	var no_cache_string = 'nocache=' + Math.random();
@@ -12,7 +86,11 @@ function displayCompareChartExec()
 
 	url_string = 'draw_compare.php';
 
-	url_string = url_string + '?' + show_thermostat_id + '&' + no_cache_string;
+	url_string = url_string + '?' + show_thermostat_id;
+	url_string = url_string + '&' + show_compare_mode;
+	url_string = url_string + '&' + show_year_1;
+	url_string = url_string + '&' + show_year_2;
+	url_string = url_string + '&' + no_cache_string;
 	//console.log( url_string );
 
 	document.getElementById( 'compare_chart' ).src = url_string;
@@ -25,6 +103,12 @@ function displayCompareChart()
 	setTimeout(function(){ displayCompareChartExec();}, 500);
 }
 
+function getYearRange()
+{
+        // First use Ajax to go get the information from the database and update the two drop downs.  For some reason, calling update() directly
+        // from window.onload didn't seem to work.
+        update('get_year_range');
+}
 </script>
 
 <?php
@@ -41,10 +125,10 @@ class Compare extends BasicTab
 		$this->setTab('');
 
 		$this->addToTab( "<div class='tab' id='compare'> <a href='#compare'> Compare </a>" );
-		$this->addToTab( "	<div class='container'>" );
+		$this->addToTab( "	<div class='container' style='width:100%'>" );
 		$this->addToTab( "		<div class='tab-toolbar'>" );
 		$this->addToTab( "			<input type='button' onClick='javascript: displayCompareChart();' value='Show'>" );
-		$this->addToTab( "			<select id='chart.compare.thermostat'>" );
+		$this->addToTab( "			<select id='chart.compare.thermostat' onChange='javascript: getYearRange();'>" );
 
 		/** Let user pick which thermostat to show, but NEVER show more than one of them!
 			*
@@ -61,15 +145,13 @@ class Compare extends BasicTab
 		}
 		$this->addToTab( "			</select>" );
 
-/** These two compare dates need to be dynamically populated based on the thermostat selected
+      /** These two compare dates need to be dynamically populated based on the thermostat selected
 	*
 	* So the select of thermostat either onChange or onBlur needs to use Ajax to choose new values for first and second dates.
-	* First date needs to go from 1 to n-1 and second date needs to go from 2 to n (where n is the max year in the record)
-	* Disable first and second when there are not two years in the record and set both to the same year
 	*
 	*/
-		$this->addToTab( "			Compare <select id='chart.compare.firstDate'><option value='2012'>2012</option><option value='2013'>2013</option><option value='2014'>2014</option></select>" );
-		$this->addToTab( "			to <select id='chart.compare.secondDate'><option value='2012'>2012</option><option value='2013'>2013</option><option value='2014'>2014</option></select>" );
+		$this->addToTab( "			Compare <select size=1 id='chart.compare.firstDate' onChange='javascript: adjust_year_dropdowns();'></select>");
+		$this->addToTab( "			to <select size=1 id='chart.compare.secondDate' onChange='javascript: adjust_year_dropdowns();'></select>");
 
 		$this->addToTab( "			for <select id='chart.compare.mode'><option value='0'>Heating</option><option value='1' selected>Cooling</option></select>" );
 
@@ -80,11 +162,12 @@ class Compare extends BasicTab
 
 		// Place chart area on tab
 		$this->addToTab( "			<div class='thermo_chart'>" );
-		$this->addToTab( "				<img id='compare_chart' src='img/need_default.png' alt='Year-over-year comparison graph' title='Year-over-year comparison'>" );
+		$this->addToTab( "				<img id='compare_chart' class='daily_temp_chart' src='images/need_default.png' alt='Year-over-year comparison graph' title='Year-over-year comparison'>" );
 		$this->addToTab( "			</div>" );
 
 		// Draw the chart
-		$this->addToTab( "			<script type='text/javascript'>" );
+		$this->addToTab( "			<script>" );
+                $this->addToTab( "                              update('get_year_range');");
 		$this->addToTab( "				displayCompareChart();" );
 		$this->addToTab( "			</script>" );
 

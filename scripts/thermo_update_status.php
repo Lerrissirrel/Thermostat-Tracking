@@ -46,10 +46,10 @@ try
 	$cycleInsert = $pdo->prepare( $sql );
 
 	// Query to retrieve prior setpoint.  Might find nothing if this is the first time.
-	$sql = "SELECT set_point FROM {$dbConfig['table_prefix']}setpoints WHERE id=? ORDER BY switch_time DESC LIMIT 1";
+	$sql = "SELECT * FROM {$dbConfig['table_prefix']}setpoints WHERE id=? ORDER BY switch_time DESC LIMIT 1";
 	$getPriorSetPoint = $pdo->prepare( $sql );
 
-	$sql = "INSERT INTO {$dbConfig['table_prefix']}setpoints( id, set_point, switch_time ) VALUES( ?, ?, ? )";
+	$sql = "INSERT INTO {$dbConfig['table_prefix']}setpoints( id, set_point, mode, switch_time ) VALUES( ?, ?, ?, ? )";
 	$insertSetPoint = $pdo->prepare( $sql );
 }
 catch( Exception $e )
@@ -70,10 +70,21 @@ foreach( $thermostats as $thermostatRec )
 		continue;
 	}
 
-	if( flock($lock, LOCK_EX) )
+        // Try every X interval for Y seconds
+        $exclusive_lock_time_out = 10; // Defined in seconds - how long to try getting the exclusive lock
+        $exclusive_lock_try_interval = 100; // Defined in milliseconds - how often to try getting the lock again
+
+        $exclusive_lock_tries = 1;
+        $got_ex_lock = 0;
+
+        while ($exclusive_lock_tries <= ($exclusive_lock_time_out * 1000)/$exclusive_lock_try_interval && $got_ex_lock == 0)
+        {
+
+	if( flock($lock, LOCK_EX | LOCK_NB) )
 	{
 		try
 		{	// Query thermostat info
+			$got_ex_lock = 1;
 			//$log->logInfo( "status: Connecting to Thermostat ID = ({$thermostatRec['id']})  uuid  = ({$thermostatRec['tstat_uuid']}) ip = ({$thermostatRec['ip']}) name = ({$thermostatRec['name']})" );
 			$stat = new Stat( $thermostatRec['ip'] );
 
@@ -99,24 +110,25 @@ foreach( $thermostats as $thermostatRec )
 			$stat->getModel();
 			if( $stat->connectOK != 0 )
 			{	// An error here is non-fatal, simply decline to use this info
-				$log->logError( 'status: Thermostat failed to respond with model number.' );
+				$log->logError( "status: Thermostat {$thermostatRec['name']} failed to respond with model number." );
 			}
 
 			$stat->getSysName();
 			if( $stat->connectOK != 0 )
 			{	// An error here is non-fatal, simply decline to use this info
-				$log->logError( 'status: Thermostat failed to respond with system info.' );
+				$log->logError( "status: Thermostat {$thermostatRec['name']} failed to respond with system info." );
 			}
 
 // Declining to update the thermostat info for now because a 0 or null in the uuid will screw up record collection the next time for this stat
-			//$log->logInfo( "status: Updating thermostat record {$thermostatRec['id']}: UUID $stat->uuid DESC $stat->sysName MDL $stat->model FW $stat->fw_version WLANFW $stat->wlan_fw_version" );
+//			$log->logInfo( "status: Updating thermostat record {$thermostatRec['id']}: UUID $stat->uuid DESC $stat->sysName MDL $stat->model FW $stat->fw_version WLANFW $stat->wlan_fw_version" );
 			//Update thermostat info in DB
-			//$updateStatInfo->execute(array( $stat->uuid , $stat->sysName, $stat->model, $stat->fw_version, $stat->wlan_fw_version, $thermostatRec['id']));
+//			$updateStatInfo->execute(array( $stat->uuid , $stat->sysName, $stat->model, $stat->fw_version, $stat->wlan_fw_version, $thermostatRec['id']));
 
 			// Get thermostat state (time, temp, mode, hold, override)
 			$stat->getStat();
 			if( $stat->connectOK == 0 )
 			{
+			$tmode      = ($stat->tmode);
 			$heatStatus = ($stat->tstate == 1) ? true : false;
 			$coolStatus = ($stat->tstate == 2) ? true : false;
 			$fanStatus  = ($stat->fstate == 1) ? true : false;
@@ -127,15 +139,17 @@ foreach( $thermostats as $thermostatRec )
 			}
 			else
 			{
-				$log->logError( 'status: Thermostat failed to respond with present status' );
+				$log->logError( "status: Thermostat {$thermostatRec['name']} failed to respond with present status" );
 				// Instead of continue, I should throw a thermostat exception!
 				continue;	// Cannot continue workting on this thermostat, try the next one in the list.
 			}
 
 			// Get prior setPoint from database
 			$getPriorSetPoint->execute(array($thermostatRec['id']));
-			$priorSetPoint = $getPriorSetPoint->fetchColumn();
-
+			$row = $getPriorSetPoint->fetch( PDO::FETCH_ASSOC);
+			$priorSetPoint = $row['set_point'];
+			$priorTmode = $row['mode'];
+//$log->logError("prior tmode: ".$priorTmode."*".$priorSetPoint."*");
 			// Get prior state info from DB
 			$priorStartDateHeat = null;
 			$priorStartDateCool = null;
@@ -171,7 +185,7 @@ foreach( $thermostats as $thermostatRec )
 				$insertStatInfo->execute( array( $stat->uuid, $now, $startDateHeat, $startDateCool, $startDateFan, $heatStatus, $coolStatus, $fanStatus ) );
 
 				$log->logInfo( "setpoints: Inserting record for a brand new never before seen thermostat with setpoint=$setPoint, time=($now) " );
-				$insertSetPoint->execute( array( $thermostatRec['id'], $setPoint, $now ) );
+				$insertSetPoint->execute( array( $thermostatRec['id'], $setPoint, $tmode, $now ) );
 			}
 			else
 			{
@@ -216,10 +230,10 @@ foreach( $thermostats as $thermostatRec )
 				$updateStatStatus->execute( array( $now, $newStartDateHeat, $newStartDateCool, $newStartDateFan, $heatStatus, $coolStatus, $fanStatus, $stat->uuid ) );
 
 				//Update the setpoints table
-				if( $setPoint != $priorSetPoint )
+				if( $setPoint != $priorSetPoint || $tmode != $priorTmode)
 				{
 					$log->logInfo( "status: Inserting changed setpoint record SP=$setPoint, old=($priorSetPoint), time=($now) " );
-					$insertSetPoint->execute( array( $thermostatRec['id'], $setPoint, $now ) );
+					$insertSetPoint->execute( array( $thermostatRec['id'], $setPoint, $tmode, $now ) );
 				}
 			}
 		}
@@ -227,14 +241,41 @@ foreach( $thermostats as $thermostatRec )
 		{
 			$log->logError( 'status: Thermostat Exception ' . $e->getMessage() );
 		}
-		flock( $lock, LOCK_UN );
 	}
 	else
 	{
-		$log->logError( "status: Couldn't get file lock for thermostat {$thermostatRec['id']}" );
+		// Didn't get the exclusive lock, wait and try again
+                $exclusive_lock_tries++;
+		usleep($exclusive_lock_try_interval * 1000); // Time between retrie (in ms). Sleep for interval number of usecs.
+	}
+        }
+
+	if ($got_ex_lock == 0)
+	{
+		$log->logError( "status: Couldn't get file lock for thermostat {$thermostatRec['name']}" );
+	}
+	else if ($exclusive_lock_tries > 1 )
+        {
+		$log->logError( "status: Took {$exclusive_lock_tries} attempts to get file lock for thermostat {$thermostatRec['name']}" );
+        }
+	if ($lock != 0)
+	{
+		flock( $lock, LOCK_UN );
 	}
 	fclose( $lock );
-}
-$log->logInfo( 'status: End.  Execution time was ' . (microtime(true) - $start_time) . ' seconds.' );
 
+	if (microtime(true) - $start_time > 59 ) // Log an error if we take more than 59 seconds, because we're going to poll again in one second
+	{
+		$log->logError( "status: Execution time for thermostat {$thermostatRec['name']} was " . (microtime(true) - $start_time) . " seconds." );
+	}
+	else if (microtime(true) - $start_time > 30 )
+	{
+		$log->logWarn( "status: Execution time for thermostat {$thermostatRec['name']} was " . (microtime(true) - $start_time) . " seconds." );
+	} 
+	else
+	{
+		$log->logInfo( "status: End.  Execution time for thermostat {$thermostatRec['name']} was " . (microtime(true) - $start_time) . " seconds." );
+	}
+}
 ?>
+

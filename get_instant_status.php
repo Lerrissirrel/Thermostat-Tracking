@@ -96,12 +96,19 @@ try
 					$lastZIP = $ZIP;
 
 					$externalWeatherAPI = new ExternalWeather( $weatherConfig );
-					$outsideData = $externalWeatherAPI->getOutdoorWeather( $ZIP );
-					$outdoorTemp = $outsideData['temp'];
-					$outdoorHumidity = $outsideData['humidity'];
-					//$log->logInfo( "get_instant_status: Outside Weather for {$ZIP}: Temp $outdoorTemp Humidity $outdoorHumidity" );
+                                        if (array($externalWeatherAPI))
+                                        {
+						$outsideData = $externalWeatherAPI->getOutdoorWeather( $ZIP );
+						$outdoorTemp = $outsideData['temp'];
+						$outdoorHumidity = $outsideData['humidity'];
+						$log->logInfo( "get_instant_status: Outside Weather for {$ZIP}: Temp $outdoorTemp Humidity $outdoorHumidity" );
 					//$returnString = $returnString . "<p>At $thermostatRec[name] it's $stat->time and $outdoorTemp &deg;$weatherConfig[units] outside and $stat->temp &deg;$weatherConfig[units] inside.</p>";
-					$greetingMsgWeather = "$outdoorTemp &deg;$weatherConfig[units] outside";
+						$greetingMsgWeather = "$outdoorTemp &deg;$weatherConfig[units] outside";
+                                        }
+                                        else
+                                        {
+						$log->logError('Unable to retrieve weather info');
+                                        }
 				}
 			}
 			catch( Exception $e )

@@ -39,13 +39,12 @@ if( $isLoggedIn )
 ?>
 
 <!DOCTYPE html>
-<html>
+<html id=bigbox_html>
 	<head>
 		<meta http-equiv=Content-Type content='text/html; charset=utf-8'>
 		<title>3M-50 Thermostat Tracking</title>
 		<link rel='shortcut icon' type='image/x-icon' href='favicon.ico' />
 
-		<link rel='stylesheet' type='text/css' href='/common/css/reset.css' >
 		<link rel='stylesheet' type='text/css' href='resources/thermo.css' />
 
 		<link rel='stylesheet' type='text/css' href='lib/tabs/tabsE.css' />		 <!-- Add tab library and set default appearance -->
@@ -87,6 +86,7 @@ if( $isLoggedIn )
 		</style>
 	</head>
 
+	<body onresize='javascript: save_window_size();'>
 	<body>
 	<!-- Internal variable declarations START -->
 	<input type='hidden' name='id' value='<?php echo urlencode($id) ?>'>
@@ -95,13 +95,8 @@ if( $isLoggedIn )
 	<!-- Internal variable declarations END -->
 
 	<div class='header'><?php require_once( $rootDir . '/header.php' ); ?></div>
-	<br><br><br>
 	<div id='bigbox'>
-
 		<div class='all_tabs'>
-			<div class='tab_gap'></div>
-			<div class='tab_gap'></div>
-
 <?php
 			require_once( 'dashboard_tab.class' );
 			require_once( 'daily_tab.class' );
@@ -369,11 +364,10 @@ div.schedule form table.schedule input[type=number]
 			<div class='tab' id='about'> <a href='#about'><img class='tab-sprite info' src='images/img_trans.gif' width='1' height='1' alt='icon: about'/> About </a>
 				<div class='container'>
 					<div class='content'>
-						<br>
 						<p>
 						<p>Source code for this project can be found on <a target='_blank' href='https://github.com/ThermoMan/3M-50-Thermostat-Tracking'>github</a>
 						<p>
-						<br><br>The project originated on Windows Home Server v1 running <a target='_blank' href='http://www.apachefriends.org/en/xampp.html'>xampp</a>. Migrated to a 'real host' to solve issues with Windows Scheduler.
+						<br>The project originated on Windows Home Server v1 running <a target='_blank' href='http://www.apachefriends.org/en/xampp.html'>xampp</a>. Migrated to a 'real host' to solve issues with Windows Scheduler.
 						<br>I used <a target='_blank' href='http://www.winscp.net'>WinSCP</a> to connect and edited the code using <a target='_blank' href='http://www.textpad.com'>TextPad</a>.
 						<p>
 						<p>This project also uses code from the following external projects
@@ -385,7 +379,7 @@ div.schedule form table.schedule input[type=number]
 							<li >The external temperatures and forecast come from <a target='_blank' href='http://www.wunderground.com/weather/api/'><img style='position:relative; top:10px; height:31px; border:0;' src='http://icons.wxug.com/logos/PNG/wundergroundLogo_4c_horz.png' alt='Weather Underground Logo'></a></li>
 						</ul>
 						<br><p>This project is based on the <a target='_blank' href='http://www.radiothermostat.com/filtrete/products/3M-50/'>Filtrete 3M Radio Thermostat</a>.
-						<br><br><br><br>
+						<br>
 						<div style='text-align: center;'>
 							<a target='_blank' href='http://validator.w3.org/check?uri=referer'><img style='border:0;width:88px;height:31px;' src='images/valid-html5.png' alt='Valid HTML 5'/><div class='caveat'><!-- ANY whitespace between the start of the anchor and the start of the div adds an underscore to the page -->
 								<br>
@@ -398,15 +392,15 @@ div.schedule form table.schedule input[type=number]
 								<br>
 							</div></a> <!-- ANY whitespace between the end of the div and the end of the anchor adds an underscore to the page -->
 							<a target='_blank' href='http://jigsaw.w3.org/css-validator/check/referer'><img style='border:0;width:88px;height:31px;' src='http://jigsaw.w3.org/css-validator/images/vcss' alt='Valid CSS!'/></a>
-							<br><br><br>The HTML5 components are tested to work in Chrome, Safari (Mac), Android 4.0.4 default browser.	They do not work (manually type in the date) in Firefox.	I've not tested the functionality in IE.	The HTML validator suggests that the HTML 5 components may also work in Opera.
+							<br>The HTML5 components are tested to work in Chrome, Safari (Mac), Android 4.0.4 default browser.	They do not work (manually type in the date) in Firefox.	I've not tested the functionality in IE.	The HTML validator suggests that the HTML 5 components may also work in Opera.
  						</div>
-						<br><br><br><br>
+						<br>
 
 						<div style='text-align: center;'>
 <?php
      // The uptime format for GNU/Linux is different than that parsed here.  For now, just skipping this section to avoid errors in the log!
      $OS = @exec( 'uname -o' );
-     if (!strstr( $OS, 'GNU/Linux'))
+     if (strstr( $OS, 'GNU/Linux'))
      {
 	$uptime = @exec( 'uptime' );
 	if( strstr( $uptime, 'days' ) )
@@ -420,10 +414,17 @@ div.schedule form table.schedule input[type=number]
 		}
 		else
 		{
-			preg_match( "/up\s+(\d+)\s+days,\s+(\d+):(\d+),/", $uptime, $times );
-			$days = $times[1];
-			$hours = $times[2];
-			$mins = $times[3];
+			// Assume the form of "up..DD..day?..HH:MM" where ".." is anything but bounded by white space, DD = days, day? matches "day" or "days", HH = hours, MM = minutes,
+			if (preg_match( "/up?.\s+(?P<days>\d+.)\s+day?.\s+(?P<hours>\d+):(?P<mins>\d+)/", $uptime, $times ) == 1)
+			{
+				$days = $times["days"];
+				$hours = $times["hours"];
+				$mins = $times["mins"];
+			}
+			else
+			{
+				error_log($uptime." failed to match uptime string");
+			}
 		}
 	}
 	else
@@ -436,17 +437,31 @@ div.schedule form table.schedule input[type=number]
 	preg_match( "/averages?: ([0-9\.]+),[\s]+([0-9\.]+),[\s]+([0-9\.]+)/", $uptime, $avgs );
 	$load = $avgs[1].", ".$avgs[2].", ".$avgs[3]."";
 
-	echo "<br>Server Uptime: $days days $hours hours $mins minutes";
-	echo "<br>Average Load: $load";
+	if (isset($days) && isset($hours) && isset($mins))
+         	echo "<br>Server Uptime: $days days $hours hours $mins minutes";
+
+	if (isset($load))
+		echo "<br>Average Load: $load";
      }
 ?>
 						</div>
 					</div>
 				</div>
 			</div>
-
 		</div>
-
 	</div>
+<script>
+var hashLinks = document.querySelectorAll("a[href^='#']");
+[].forEach.call(hashLinks, function (link) {
+  link.addEventListener("click", function (event) {
+    event.preventDefault();
+    history.pushState({}, "", link.href);
+    
+    // Update the URL again with the same hash, then go back
+    history.pushState({}, "", link.href);
+    history.back();
+  });
+});
+</script>
 	</body>
 </html>

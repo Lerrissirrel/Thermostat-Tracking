@@ -2,6 +2,9 @@
 $start_time = microtime(true);
 require_once( 'common_chart.php' );
 
+use CpChart\Data;
+use CpChart\Image;
+
 $hddBaseF = 65;
 $cddBaseF = 65;
 
@@ -19,49 +22,41 @@ else
 	$cddBase = $cddBaseC;
 }
 
+if (isset($_GET['show_compare_mode']))
+{ 
+   $compare_mode = $_GET['show_compare_mode'];
+//   $log->logError("compare_mode: ".$compare_mode);
 
-//ROUND(SUM(heat_runtime)/60,0) AS heatHours,
-//ROUND(SUM(cool_runtime)/60,0) AS coolHours
-//AND   DATE_FORMAT(date, '%Y') = '2013'
-// DATE_FORMAT(date, '%Y-%m')
+   if ($compare_mode < 0 || $compare_mode > 1)
+   { // If it is out of bounds, default to heat.  1: cool; 0: heat
+      $log->logError("No compare mode was specified");
+      $compare_mode = 0;
+   }
+}
+else
+{
+   $log->logError("show_compare_mode: Failed");
+}
 
-$sql = "SELECT DATE_FORMAT(date, '%m') AS theMonthNumber,
-DATE_FORMAT(date, '%M') AS theMonth,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2012', heat_runtime, 0))/60,0) AS heatHours12,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2013', heat_runtime, 0))/60,0) AS heatHours13,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2014', heat_runtime, 0))/60,0) AS heatHours14,
+if (isset($_GET['show_year_1']))
+{ 
+   $show_year_1 = $_GET['show_year_1'];
+//   $log->logError("show_year_1: ".$show_year_1);
+}
+else
+{
+   $log->logError("show_year_1: Failed");
+}
 
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2012', cool_runtime, 0))/60,0) AS coolHours12,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2013', cool_runtime, 0))/60,0) AS coolHours13,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2014', cool_runtime, 0))/60,0) AS coolHours14
-
-FROM {$dbConfig['table_prefix']}run_times
-WHERE tstat_uuid = ?
-GROUP BY 1
-ORDER BY 1";
-//$queryRunTimes = $pdo->prepare( $sql );
-//$queryRunTimes->execute( array( $uuid ) );
-
-// Perhaps count the rows and if fewer than 24 then give message like "not enough data, be patient grasshopper"?
-
-$sql = "SELECT DATE_FORMAT(date, '%Y-%m') AS date,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2012', avgTempHDD, 0)),1) AS hdd12,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2013', avgTempHDD, 0)),1) AS hdd13,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2014', avgTempHDD, 0)),1) AS hdd14,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2012', avgTempCDD, 0)),1) AS cdd12,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2013', avgTempCDD, 0)),1) AS cdd13,
-ROUND(SUM(IF( DATE_FORMAT(date, '%Y') = '2014', avgTempCDD, 0)),1) AS cdd14
-FROM (
-SELECT date_format(date, '%Y-%m-%d') AS date,
-IF( AVG(outdoor_temp) <= $hddBase, $hddBase - AVG(outdoor_temp), 0 ) AS avgTempHDD,
-IF( AVG(outdoor_temp) >= $cddBase, AVG(outdoor_temp) - $cddBase, 0 ) AS avgTempCDD
-FROM {$dbConfig['table_prefix']}run_times
-WHERE tstat_uuid = ?
-GROUP BY DATE_FORMAT(date, '%Y-%m-%d') ) derivedTemperatures
-GROUP BY 1
-";
-//$queryDegreeDays = $pdo->prepare( $sql );
-//$queryDegreeDays->execute( array( $uuid ) );
+if (isset($_GET['show_year_2']))
+{ 
+   $show_year_2 = $_GET['show_year_2'];
+//   $log->logError("show_year_2: ".$show_year_2);
+}
+else
+{
+   $log->logError("show_year_2: Failed");
+}
 
 /**
 	* To compute degree days....
@@ -94,21 +89,19 @@ GROUP BY 1
 $giantSQL = "SELECT
 	t1.theMonthNumber,
 	t1.theMonth AS theMonth,
-	heatHours12, heatHours13, heatHours14,
-	coolHours12, coolHours13, coolHours14
-	hdd12, hdd13, hdd14,
-	cdd12, cdd13, cdd14
+	heatHours12, heatHours13,
+	coolHours12, coolHours13,
+	hdd12, hdd13,
+	cdd12, cdd13
 FROM
 	(
 		SELECT
 			DATE_FORMAT(rt.date, '%m') AS theMonthNumber,
 			DATE_FORMAT(rt.date, '%M') AS theMonth,
-			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '2012', rt.heat_runtime, 0))/60,0) AS heatHours12,
-			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '2013', rt.heat_runtime, 0))/60,0) AS heatHours13,
-			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '2014', rt.heat_runtime, 0))/60,0) AS heatHours14,
-			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '2012', rt.cool_runtime, 0))/60,0) AS coolHours12,
-			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '2013', rt.cool_runtime, 0))/60,0) AS coolHours13,
-			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '2014', rt.cool_runtime, 0))/60,0) AS coolHours14
+			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '".$show_year_1."', rt.heat_runtime, 0))/60,0) AS heatHours12,
+			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '".$show_year_2."', rt.heat_runtime, 0))/60,0) AS heatHours13,
+			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '".$show_year_1."', rt.cool_runtime, 0))/60,0) AS coolHours12,
+			ROUND(SUM(IF( DATE_FORMAT(rt.date, '%Y') = '".$show_year_2."', rt.cool_runtime, 0))/60,0) AS coolHours13
 		FROM {$dbConfig['table_prefix']}run_times rt
 		WHERE tstat_uuid = ?
 		GROUP BY 1, 2
@@ -117,12 +110,10 @@ FROM
 		SELECT
 			DATE_FORMAT(dt.date, '%m') AS theMonthNumber,
 			DATE_FORMAT(dt.date, '%M') AS theMonth,
-			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '2012', dt.avgTempHDD, 0)),1) AS hdd12,
-			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '2013', dt.avgTempHDD, 0)),1) AS hdd13,
-			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '2014', dt.avgTempHDD, 0)),1) AS hdd14,
-			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '2012', dt.avgTempCDD, 0)),1) AS cdd12,
-			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '2013', dt.avgTempCDD, 0)),1) AS cdd13,
-			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '2014', dt.avgTempCDD, 0)),1) AS cdd14
+			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '".$show_year_1."', dt.avgTempHDD, 0)),1) AS hdd12,
+			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '".$show_year_2."', dt.avgTempHDD, 0)),1) AS hdd13,
+			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '".$show_year_1."', dt.avgTempCDD, 0)),1) AS cdd12,
+			ROUND(SUM(IF( DATE_FORMAT(dt.date, '%Y') = '".$show_year_2."', dt.avgTempCDD, 0)),1) AS cdd13
 		FROM
 		(
 			SELECT
@@ -140,48 +131,59 @@ WHERE
 AND t1.theMonth = t2.theMonth
 ";
 
+$log->logInfo($giantSQL);
 $queryGiant = $pdo->prepare( $giantSQL );
 $queryGiant->execute( array( $uuid, $uuid ) );
 
+$minmaxSQL = "SELECT
+    MIN(YEAR (end_time)) AS earliest_year,
+    MAX(YEAR (end_time)) AS latest_year
+FROM {$dbConfig['table_prefix']}hvac_cycles
+WHERE tstat_uuid = ?;
+";
 
+//$log->logError($minmaxSQL);
+$queryMinmax = $pdo->prepare( $minmaxSQL );
+$result = $queryMinmax->execute( array($uuid) );
+//$log->logError("minmax result: ".$result);
+while ($row = $queryMinmax->fetch(PDO::FETCH_ASSOC))
+{
+  $log->logInfo("raw data: ".print_r($row, true));
+}
 // Create and populate the pData object
-$MyData = new pData();
+$MyData = new Data();
 
 while( $row = $queryGiant->fetch( PDO::FETCH_ASSOC ) )
 {
+    $MyData->addPoints( $row[ 'theMonth' ], 'Labels' );
 
-	$MyData->addPoints( $row[ 'theMonth' ], 'Labels' );
-
-//	$MyData->addPoints( $row[ 'heatHours12' ], 'Heating12' );
-//	$MyData->addPoints( $row[ 'hdd12' ], 'Heating Degrees 2012' );
-	$MyData->addPoints( $row[ 'coolHours12' ], 'Cooling 2012' );
-	$MyData->addPoints( $row[ 'cdd12' ], 'Cooling Degrees 2012' );
-
-//	$MyData->addPoints( $row[ 'heatHours13' ], 'Heating13' );
-//	$MyData->addPoints( $row[ 'hdd13' ], 'Heating Degrees 2013' );
-	$MyData->addPoints( $row[ 'coolHours13' ], 'Cooling 2013' );
-	$MyData->addPoints( $row[ 'cdd13' ], 'Cooling Degrees 2013' );
-
-//	$MyData->addPoints( $row[ 'heatHours14' ], 'Heating14' );
-//	$MyData->addPoints( $row[ 'hdd14' ], 'Heating Degrees 2014' );
-//	$MyData->addPoints( $row[ 'coolHours14' ], 'Cooling 2014' );
-//	$MyData->addPoints( $row[ 'cdd14' ], 'Cooling Degrees 2014' );
+    if ($compare_mode == 0) // Heat
+    {
+//        $log->logError($show_year_1." ".$row['theMonth']." heat Hours: ".$row['heatHours12']." heat degrees: ".$row['hdd12']);
+//        $log->logError($show_year_2." ".$row['theMonth']." heat Hours: ".$row['heatHours13']." heat degrees: ".$row['hdd13']);
+	$MyData->addPoints( $row[ 'heatHours12' ], 'Heating '.$show_year_1 );
+	$MyData->addPoints( $row[ 'hdd12' ], 'Heating Degrees '.$show_year_1 );
+	$MyData->addPoints( $row[ 'heatHours13' ], 'Heating '.$show_year_2 );
+	$MyData->addPoints( $row[ 'hdd13' ], 'Heating Degrees '.$show_year_2 );
+        $MyData->setSerieOnAxis( 'Heating '.$show_year_1, 0 );
+        $MyData->setSerieOnAxis( 'Heating '.$show_year_2, 0 );
+        $MyData->setSerieOnAxis( 'Heating Degrees '.$show_year_1, 1 );
+        $MyData->setSerieOnAxis( 'Heating Degrees '.$show_year_2, 1 );
+    }
+    else
+    {
+//        $log->logError($show_year_1." ".$row['theMonth']." cool Hours: ".$row['coolHours12']." cool degrees: ".$row['cdd12']);
+//        $log->logError($show_year_2." ".$row['theMonth']." cool Hours: ".$row['coolHours13']." cool degrees: ".$row['cdd13']);
+	$MyData->addPoints( $row[ 'coolHours12' ], 'Cooling '.$show_year_1 );
+	$MyData->addPoints( $row[ 'cdd12' ], 'Cooling Degrees '.$show_year_1 );
+	$MyData->addPoints( $row[ 'coolHours13' ], 'Cooling '.$show_year_2 );
+	$MyData->addPoints( $row[ 'cdd13' ], 'Cooling Degrees '.$show_year_2 );
+        $MyData->setSerieOnAxis( 'Cooling '.$show_year_1, 0 );
+        $MyData->setSerieOnAxis( 'Cooling '.$show_year_2, 0 );
+        $MyData->setSerieOnAxis( 'Cooling Degrees '.$show_year_1, 1 );
+        $MyData->setSerieOnAxis( 'Cooling Degrees '.$show_year_2, 1 );
+    }
 }
-
-// Attach the data series to the axis (by ordinal)
-//$MyData->setSerieOnAxis( 'Heating 2012', 0 );
-//$MyData->setSerieOnAxis( 'Heating 2013', 0 );
-//$MyData->setSerieOnAxis( 'Heating 2014', 0 );
-//$MyData->setSerieOnAxis( 'Heating Degrees 2012', 1 );
-//$MyData->setSerieOnAxis( 'Heating Degrees 2013', 1 );
-//$MyData->setSerieOnAxis( 'Heating Degrees 2014', 1 );
-$MyData->setSerieOnAxis( 'Cooling 2012', 0 );
-$MyData->setSerieOnAxis( 'Cooling 2013', 0 );
-//$MyData->setSerieOnAxis( 'Cooling 2014', 0 );
-$MyData->setSerieOnAxis( 'Cooling Degrees 2012', 1 );
-$MyData->setSerieOnAxis( 'Cooling Degrees 2013', 1 );
-//$MyData->setSerieOnAxis( 'Cooling Degrees 2014', 1 );
-
 
 // Set names for Y-axis labels
 $MyData->setAxisName( 0, 'Hours' );
@@ -201,7 +203,7 @@ $chartTitle = 'HVAC run times for each month in the record';
 /**
 	* START of common block - this code should be identical for all charts so that they have a common look and feel
 	*/
-$myPicture = new pImage( 900, 430, $MyData );	// Create the pChart object
+$myPicture = new Image( 900, 430, $MyData );	// Create the pChart object
 $myPicture->Antialias = FALSE;								// Turn OFF Antialiasing (it draws faster)
 
 // Draw the background
@@ -251,19 +253,39 @@ $myPicture->drawLegend( 60, 412, array( 'Style' => LEGEND_NOBORDER, 'Mode' => LE
 //$myPicture->drawLineChart( array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO ) );
 //$myPicture->drawBarChart( array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO ) );
 
-$Settings = array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO, 'Gradient' => 1, 'AroundZero' => TRUE, 'Interleave' => 2  );
-$MyData->setSerieDrawable( 'Cooling 2012', TRUE );
-$MyData->setSerieDrawable( 'Cooling 2013', TRUE );
-$MyData->setSerieDrawable( 'Cooling Degrees 2012', FALSE );
-$MyData->setSerieDrawable( 'Cooling Degrees 2013', FALSE );
-$myPicture->drawBarChart( 'Cooling 2012', 'Cooling 2013', $Settings );
+if ($compare_mode == 0) // Heat
+{
+   $Settings = array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO, 'Gradient' => 1, 'AroundZero' => TRUE, 'Interleave' => 2  );
+   $MyData->setSerieDrawable( 'Heating '.$show_year_1, TRUE );
+   $MyData->setSerieDrawable( 'Heating '.$show_year_2, TRUE );
+   $MyData->setSerieDrawable( 'Heating Degrees '.$show_year_1, FALSE );
+   $MyData->setSerieDrawable( 'Heating Degrees '.$show_year_2, FALSE );
+   $myPicture->drawBarChart( $Settings );
 
-$Settings = array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO );
-$MyData->setSerieDrawable( 'Cooling 2012', FALSE );
-$MyData->setSerieDrawable( 'Cooling 2013', FALSE );
-$MyData->setSerieDrawable( 'Cooling Degrees 2012', TRUE );
-$MyData->setSerieDrawable( 'Cooling Degrees 2013', TRUE );
-$myPicture->drawLineChart( 'Cooling Degrees 2012', 'Cooling Degrees 2013', $Settings );
+   $Settings = array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO );
+   $MyData->setSerieDrawable( 'Heating '.$show_year_1, FALSE );
+   $MyData->setSerieDrawable( 'Heating '.$show_year_2, FALSE );
+   $MyData->setSerieDrawable( 'Heating Degrees '.$show_year_1, TRUE );
+   $MyData->setSerieDrawable( 'Heating Degrees '.$show_year_2, TRUE );
+   $myPicture->drawLineChart( $Settings );
+
+}
+else
+{
+   $Settings = array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO, 'Gradient' => 1, 'AroundZero' => TRUE, 'Interleave' => 2  );
+   $MyData->setSerieDrawable( 'Cooling '.$show_year_1, TRUE );
+   $MyData->setSerieDrawable( 'Cooling '.$show_year_2, TRUE );
+   $MyData->setSerieDrawable( 'Cooling Degrees '.$show_year_1, FALSE );
+   $MyData->setSerieDrawable( 'Cooling Degrees '.$show_year_2, FALSE );
+   $myPicture->drawBarChart( $Settings );
+
+   $Settings = array( 'DisplayValues' => FALSE, 'DisplayColor' => DISPLAY_AUTO );
+   $MyData->setSerieDrawable( 'Cooling '.$show_year_1, FALSE );
+   $MyData->setSerieDrawable( 'Cooling '.$show_year_2, FALSE );
+   $MyData->setSerieDrawable( 'Cooling Degrees '.$show_year_1, TRUE );
+   $MyData->setSerieDrawable( 'Cooling Degrees '.$show_year_2, TRUE );
+   $myPicture->drawLineChart( $Settings );
+}
 
 // Render the picture
 $myPicture->autoOutput( 'images/compare_chart.png' );

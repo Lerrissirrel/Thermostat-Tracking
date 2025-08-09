@@ -39,11 +39,6 @@ class Dashboard
 		$htmlString .= "</div>";
 		$htmlString .= "<div class='tab_gap'></div>";
 
-		// Now that the dashbord tab is loaded, set it to be the target
-		$htmlString .= "<script>";
-		$htmlString .= "	location.href = '#dashboard';";
-		$htmlString .= "</script>";
-
 		echo $htmlString;
 	}
 }

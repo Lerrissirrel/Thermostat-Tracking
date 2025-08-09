@@ -3,7 +3,59 @@
 	* chart is one of 'daily' or 'history'
 	* sytle is one of 'chart' or 'table'
 	*
-	*/
+*/
+
+var number_of_clears = 0;
+
+function remove_table()
+{
+	var border_string;
+
+	if (number_of_clears == 0)
+	{
+		display_chart( 'daily', 'table' );
+		number_of_clears = 1;
+		document.getElementById('chart_button').value = "Clear it";
+	}
+	else
+	{
+		var div = document.getElementById('daily_temperature_table');
+		while(div.firstChild) {
+			div.removeChild(div.firstChild);
+		}
+		border_string = 'border: '+number_of_clears+'px';
+        	document.getElementById('daily_temperature_table').style = border_string;
+		document.getElementById('chart_button').value = "Chart it";
+		number_of_clears = 0;
+	}
+}
+
+
+function reset_date()
+{
+	var today = new Date();
+	var monthString = today.getMonth() + 1; // Because getMonth() is zero based
+	
+	if( monthString < 10 )
+    	{
+		monthString = '0' + monthString;
+    	}
+    
+	var dateString = today.getDate();
+    
+	if( dateString < 10 )
+    	{
+		dateString = '0' + dateString;
+    	}
+    
+	today = '' + today.getFullYear() + '-' + monthString + '-' + dateString;
+	
+	document.getElementById( 'chart.daily.toDate' ).value = today;
+	
+        display_chart( 'daily', 'chart' );	// Now go show the new interval
+}
+
+
 function display_chart( chart, style )
 {
 	var chart_target;
@@ -11,10 +63,13 @@ function display_chart( chart, style )
 
 	if( chart == 'daily' && style == 'chart' )
 	{
+		var random_number = Math.random();
 		chart_target = document.getElementById( 'daily_temperature_chart' );
-		chart_target.src = 'images/daily_temperature_placeholder.png';	// Redraw the placekeeper while the chart is rendering
+		chart_target.src = 'images/daily_chart_greyscale.png?dummy=' + random_number;
+//		console.log("image src: "+chart_target.src);
+//		chart_target.src = 'images/daily_temperature_placeholder.png';
 		// By using setTimeout we can separate the drawing of the placeholder image from the actual chart such that the browser will always draw the placeholder
-		setTimeout(function(){ display_chart_build_and_display(chart, style, 'false', chart_target);}, 500);
+		setTimeout(function(){ display_chart_build_and_display(chart, style, 'false', chart_target);chart_target = document.getElementById( 'daily_temperature_chart' );}, 500);
 	}
 	else if( chart == 'daily' && style == 'table' )
 	{
@@ -24,6 +79,7 @@ function display_chart( chart, style )
 		chart_target.innerHTML = '';
 		display_chart_build_and_display( chart, style, table_flag, chart_target );
 		*/
+                document.getElementById('daily_temperature_table').style = 'border: solid black 1px; height: 200px';
 		update( 'daily_table' );
 	}
 	else
@@ -31,6 +87,20 @@ function display_chart( chart, style )
 		alert( 'You asked for '+chart+' and '+style+' and I do not know how to do that (yet).' );
 		return;
 	}
+}
+function save_window_size()
+{
+   var window_width             = 'chart.daily.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+   var window_height            = 'chart.daily.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+	
+//	    display_chart( 'daily', 'chart' );	// Now go show the new interval
+
+   var window_width             = 'chart.history.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+   var window_height            = 'chart.history.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+
+   display_historic_chart();
+
+
 }
 
 function display_chart_build_and_display( chart, style, table_flag, chart_target )
@@ -47,7 +117,8 @@ function display_chart_build_and_display( chart, style, table_flag, chart_target
 	var show_fan_cycle_string    = 'chart.daily.showFan='	        + document.getElementById( 'chart.daily.showFan' ).checked;
 	var show_outdoor_humid_str   = 'chart.daily.showOutdoorHumidity=' + document.getElementById( 'chart.daily.showOutdoorHumidity' ).checked;
 	var show_indoor_humid_str    = 'chart.daily.showIndoorHumidity='  + document.getElementById( 'chart.daily.showIndoorHumidity' ).checked;
-
+	var window_width             = 'chart.daily.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+	var window_height            = 'chart.daily.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
 	// Browsers are very clever with image caching.	In this case it breaks the web page function.
 	var no_cache_string = 'nocache=' + Math.random();
 
@@ -55,17 +126,19 @@ function display_chart_build_and_display( chart, style, table_flag, chart_target
 	if( chart == 'daily' )
 	{
 		url_string = 'draw_daily.php';
+		chart_target.src = url_string;
 	}
 	else if( chart == 'history' )
 	{
 		// This space intentionally left blank (actually I don't recall why it was left blank, but everything seems to work)
 	}
 
-	url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + show_setpoint_string + '&' + table_flag + '&' +
+//	url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + show_setpoint
+url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + show_setpoint_string + '&' + table_flag + '&' +
 							 daily_interval_length  + '&' + daily_interval_group   + '&' + daily_to_date_string  + '&' +
 							 show_heat_cycle_string	+ '&' + show_cool_cycle_string + '&' + show_fan_cycle_string + '&' +
 							 show_outdoor_humid_str	+ '&' + show_indoor_humid_str	 + '&' +
-							 no_cache_string;
+							 no_cache_string        + '&' + window_width             + '&' + window_height;
 
 	if( style == 'chart' )
 	{
@@ -81,12 +154,16 @@ function display_chart_build_and_display( chart, style, table_flag, chart_target
 */
 		return url_string;
 	}
+//	setTimeout(function(){chart_target = document.getElementById( 'daily_temperature_chart' ); chart_target.style = 'opacity: 1'; }, 350);
+//	chart_target = document.getElementById( 'daily_temperature_chart' );
+//	chart_target.style = 'opacity: 1';
 }
 
 
 /**
 	*	Save the value of the checkbox for later - and update the chart with the new value
 	*/
+
 function toggle_daily_flag( flag )
 {
 	setCookie( flag, document.getElementById(flag).checked );
@@ -107,7 +184,7 @@ class DailyDetail
 	function displayTab()
 	{
 		$htmlString = '';
-
+//		$htmlString .= "<onresize='save_widow_size()'>";
 		$htmlString .= "<div class='tab' id='daily'> <a href='#daily'> Daily Detail </a>";
 		$htmlString .= "	<div class='container'>";
 		$htmlString .= "		<div class='tab-toolbar'>";
@@ -159,7 +236,7 @@ class DailyDetail
 //		$htmlString .= "			</script>";
 
 		// The second row of toolbar must be nested in the original div or else a nasty space appears between the two
-		$htmlString .= "<div class='tab-toolbar'>";
+//		$htmlString .= "<div class='tab-toolbar'>";
 		$htmlString .= "	<input type='button' onClick='javascript: interval(-1);' value='Previous' title='Show previous timeframe' >";
 		$htmlString .= "	Timeframe <input type='text' id='chart.daily.interval.length' onChange='javascript: saveDateData(\'daily\');' value='7' size='3'>";
 		$htmlString .= "	<select id='chart.daily.interval.group' onChange='javascript: saveDateData(\'daily\');' style='width: 65px'>";
@@ -173,22 +250,27 @@ class DailyDetail
 		global $show_date;
 		$htmlString .= "	ending on <input type='date' id='chart.daily.toDate' onChange='javascript: saveDateData(\'daily\');' size='10' value='{$show_date}' max='{$show_date}' step='1'/>";
 		$htmlString .= "	<input type='button' onClick='javascript: interval(1);' value='Next' title='Show next timeframe' >";
+		$htmlString .= "	<input type='button' onClick='javascript: reset_date();' value='Today' title='Set timeframe back to today' >";
+
 /** Not yet working so hide it from user until it does...
 	<input type='checkbox' id='auto_refresh'		 name='auto_refresh'		 onChange='javascript: timedRefresh();'/>Auto refresh
 	<span id='daily_update' style='float: right; vertical-align: middle; visibility: hidden;'>Countdown to refresh: 00:00</span>
 */
-		$htmlString .= "		</div>";
+//		$htmlString .= "		</div>";
 		$htmlString .= "</div>";
 
 		$htmlString .= "<div class='content'>";
 		$htmlString .= "<br>";
 		$htmlString .= "<div class='thermo_chart'>";
-		$htmlString .= "	<img id='daily_temperature_chart' src='images/daily_temperature_placeholder.png' alt='The temperatures'>";
+//		$htmlString .= "	<img id='daily_temperature_chart' class='daily_temp_chart' src='images/daily_temperature_placeholder.png' alt='The temperatures' style='width: 100%; object-fit: fill'>";
+		$htmlString .= "	<img id='daily_temperature_chart' class='daily_temp_chart' src='images/daily_temperature_placeholder.png' alt='The temperatures' style='width: 100%; object-fit: fill'>";
 		$htmlString .= "</div>";
 
-		$htmlString .= '<input type="button" onClick="javascript: display_chart( \'daily\', \'table\' );" value="Chart it" style="float: right;">';
+		$htmlString .= '<input type="button" id="chart_button" onClick="javascript: remove_table();" value="Chart it" style="float: right; margin-right: 20px;">';
+//		$htmlString .= '<input type="button" onClick="javascript: display_chart( \'daily\', \'table\' );" value="Chart it" style="float: right;">';
+			   
 //$htmlString .= "<div id='daily_temperature_table' class='daily_temperature_table'>";
-$htmlString .= "<div id='daily_temperature_table' class='status daily_temperature_table'>";
+$htmlString .= "<div id='daily_temperature_table' class='daily_temperature_table'>";
 		// This blank spot gets replaced by a chart chart with data
 		$htmlString .= "</div>";
 

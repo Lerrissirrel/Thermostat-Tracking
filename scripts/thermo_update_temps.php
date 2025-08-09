@@ -4,7 +4,6 @@ require(dirname(__FILE__).'/../common.php');
 
 // set the timezone from the config
 date_default_timezone_set( $timezone );
-
 $log->logInfo( 'temps: Start.' );
 $today = date( 'Y-m-d' );
 $yesterday = date( 'Y-m-d', strtotime( 'yesterday' ));
@@ -13,7 +12,6 @@ $yesterday = date( 'Y-m-d', strtotime( 'yesterday' ));
 $unixTime = substr_replace(date('Y-m-d H:i:s'), "0:00", 15, 4);
 
 // This script updates the indoor and outdoor temperatures and today's and yesterday total run time for each thermostat.
-
 try
 {
 	$sql = "SELECT NOW() as now_time, CONCAT( SUBSTR( NOW() , 1, 15 ) , '0:00' ) as magic_time;";
@@ -46,9 +44,16 @@ try
 {
 	$externalWeatherAPI = new ExternalWeather( $weatherConfig );
 	$outsideData = $externalWeatherAPI->getOutdoorWeather( $ZIP );
-	$outdoorTemp = $outsideData['temp'];
+        if (array($outsideData))
+	{	
+        $outdoorTemp = $outsideData['temp'];
 	$outdoorHumidity = $outsideData['humidity'];
-//$log->logInfo( "temps: Outside Weather for {$ZIP}: Temp $outdoorTemp Humidity $outdoorHumidity" );
+$log->logError( "temps: Outside Weather for {$ZIP}: Temp $outdoorTemp Humidity $outdoorHumidity" );
+	}
+	else
+	{
+	$log->logError( 'temps: External weather failed: ' . $e->getMessage() );
+	}	
 }
 catch( Exception $e )
 {
@@ -66,8 +71,18 @@ foreach( $thermostats as $thermostatRec )
 		continue;
 	}
 
-	if( flock( $lock, LOCK_EX ) )
+	// Try every X interval for Y seconds
+	$exclusive_lock_time_out = 10; // Defined in seconds - how long to try getting the exclusive lock
+	$exclusive_lock_try_interval = 100; // Defined in milliseconds - how often to try getting the lock again
+
+        $exclusive_lock_tries = 1;
+	$got_ex_lock = 0;
+
+        while ($exclusive_lock_tries <= ($exclusive_lock_time_out * 1000)/$exclusive_lock_try_interval && $got_ex_lock == 0)
+        {
+	if( flock( $lock, LOCK_EX || LOCK_NB) )
 	{
+                $got_ex_lock = 1;
 		try
 		{
 			// Query thermostat info
@@ -129,15 +144,42 @@ foreach( $thermostats as $thermostatRec )
 		{	// Does t_lib even throw exceptions?  I don't think it does.
 			$log->logInfo( 'temps: Thermostat Exception: ' . $e->getMessage() );
 		}
-		flock( $lock, LOCK_UN );
 	}
 	else
 	{
-		$log->logInfo( "temps: Couldn't get file lock for thermostat {$thermostatRec['id']}" );
-		die();
+		usleep($exclusive_lock_try_interval * 1000); // Time between retrie (in ms). Sleep for interval number of usecs.
+		$log->logError( "temps: Couldn't get file lock for thermostat {$thermostatRec['name']} on try {$exclusive_lock_tries}" );
+		$exclusive_lock_tries++;
 	}
-	fclose($lock);
+        } // While loop on trying to get exclusive lock
+
+	if ($got_ex_lock == 0)
+        {
+                $log->logError( "temps: Couldn't get file lock for {$thermostatRec['name']} temps" );
+        }
+        else if ($exclusive_lock_tries > 1 )
+        {
+                $log->logError( "temps: Took {$exclusive_lock_tries} attempts to get file lock for thermostat {$thermostatRec['name']} temps" );
+        }
+
+        if ($lock != 0)
+        {
+                flock( $lock, LOCK_UN );
+        }
+        fclose( $lock );
+
+        if (microtime(true) - $start_time > 59 ) // Log an error if we take more than 59 seconds, because we're going to poll again in one second
+        {
+                $log->logError( "temps: Execution time for thermostat {$thermostatRec['name']} was " . (microtime(true) - $start_time) . " seconds." );
+        }
+        else if (microtime(true) - $start_time > 30 )
+        {
+                $log->logWarn( "temps: Execution time for thermostat {$thermostatRec['name']} was " . (microtime(true) - $start_time) . " seconds." );
+        }
+        else
+        {
+		$log->logInfo( "temps: End.  Execution time for thermostat {$thermostatRec['name']} was " . (microtime(true) - $start_time) . " seconds." );
+        }
 }
-$log->logInfo( 'temps: End.  Execution time was ' . (microtime(true) - $start_time) . ' seconds.' );
 
 ?>

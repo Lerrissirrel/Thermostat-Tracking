@@ -41,6 +41,29 @@ if( isset( $_GET['interval_length'] ) )
 $date_text = array( 0 => 'days', 1 => 'weeks', 2 => 'months' );
 $interval_string = $to_date . ' -' . $interval_length . ' ' . $date_text[$interval_measure];
 
+/* Get the width of the window so we can use it to scale the chart */
+if ( isset( $_GET['chart_history_width'] ))
+{
+    $window_width = $_GET['chart_history_width'];
+}
+else
+{
+    $window_width = 1125; /* Default to 1000px wide */
+}
+
+if ( isset( $_GET['chart_history_height'] ))
+{
+    $window_height = $_GET['chart_history_height'];
+}
+else
+{
+    $window_height = 538; /* Default to 430 */
+}
+
+/* Let's use 80% horizontally and 80% vertically of the screen.  Seems like a reasonable default */
+$chart_width = $window_width * .88;
+$chart_height = $window_height * .69;
+
 // Compute the from date
 $from_date = date( 'Y-m-d', strtotime( $interval_string ) );
 
@@ -106,9 +129,11 @@ $query->execute( array( $uuid ) );
 This comment may no longer be true??? - need to test!!!
 	*/
 
+use CpChart\Data;
+use CpChart\Image;
 
 // Create and populate the pData object
-$MyData = new pData();
+$MyData = new Data();
 
 // Set default boundaries for chart
 $chart_y_min = $normalLows[ date( 'n', strtotime($from_date) )-1 ];
@@ -142,6 +167,7 @@ $first = true;
 
 // This is an offset to stop the colors from inverting when some values get too close to each other
 $delta = 0.1;	// Value used to be 0.75 which worked for some specific data glitches but not all.  Trying lower number because the glitches would go away when another day was added anyway.
+$delta = 0;	// Value used to be 0.75 which worked for some specific data glitches but not all.  Trying lower number because t
 
 while( $row = $query->fetch( PDO::FETCH_ASSOC ) )
 {
@@ -158,40 +184,40 @@ while( $row = $query->fetch( PDO::FETCH_ASSOC ) )
     $MyData->addPoints( $row[ 'date' ], 'Labels' );
     $first = false;
   }
-	else
-	{
-// This whole block of code is about formatting the x-axis labels so they are easy to read.
-// It needs to be updated to be aware of the interval setting.
-    if( $days > 120 )
-		{	// For ultra-long date ranges, only show month changes in the X-Axis.  "Ultra long" is anything over 4 months.
-			if( substr( $row['date'], 5, 2 ) != $old_month )
-			{ // Thereafter show only MM-DD when you show anything at all
-				// Show month name ala 'Dec'
-				$MyData->addPoints( date('M', mktime( 0, 0, 0, substr( $row['date'], 5, 2 ), 1) ), 'Labels' );
-			}
-			else
-			{ // Add a blank instead of text for some x-axis labels.
-				$MyData->addPoints( VOID, 'Labels' );
-			}
-		}
-    else if( $days > 14 )
-		{	// For long date ranges, show the first day of each week in the X-Axis.  "Long" is 2 weeks to 4 months.
-      if( date_format( date_create($row[ 'date' ]), 'N' ) == 7 )
-      { // Show the date only for the first day of each week
-        $MyData->addPoints( substr( $row[ 'date' ], 5, 5 ), 'Labels' );
+  else
+  {
+      // This whole block of code is about formatting the x-axis labels so they are easy to read.
+      // It needs to be updated to be aware of the interval setting.
+      if( $days > 120 )
+      {	// For ultra-long date ranges, only show month changes in the X-Axis.  "Ultra long" is anything over 4 months.
+          if( substr( $row['date'], 5, 2 ) != $old_month )
+          { // Thereafter show only MM-DD when you show anything at all
+              // Show month name ala 'Dec'
+              $MyData->addPoints( date('M', mktime( 0, 0, 0, substr( $row['date'], 5, 2 ), 1) ), 'Labels' );
+          }
+          else
+          { // Add a blank instead of text for some x-axis labels.
+              $MyData->addPoints( VOID, 'Labels' );
+          }
+      }
+      else if( $days > 14 )
+      {	// For long date ranges, show the first day of each week in the X-Axis.  "Long" is 2 weeks to 4 months.
+          if( date_format( date_create($row[ 'date' ]), 'N' ) == 7 )
+          { // Show the date only for the first day of each week
+              $MyData->addPoints( substr( $row[ 'date' ], 5, 5 ), 'Labels' );
+          }
+          else
+          { // Placekeeper for non-shown dates
+              $MyData->addPoints( VOID, 'Labels' );
+          }
       }
       else
-      { // Placekeeper for non-shown dates
-        $MyData->addPoints( VOID, 'Labels' );
+      { // For short date ranges show every day.  "Short" is two weeks or less
+          $MyData->addPoints( substr( $row[ 'date' ], 5, 5 ), 'Labels' );
       }
-		}
-		else
-    { // For short date ranges show every day.  "Short" is two weeks or less
-      $MyData->addPoints( substr( $row[ 'date' ], 5, 5 ), 'Labels' );
-		}
-	}
-	$old_month = substr( $row['date'], 5, 2 );
-
+  }
+  
+  $old_month = substr( $row['date'], 5, 2 );
 	// The fake $delta difference forced into the data here is to prevent a charting bug from inverting the colors in some regions
 	if( $indoor == 0 || $indoor == 2 )
 	{
@@ -215,11 +241,15 @@ while( $row = $query->fetch( PDO::FETCH_ASSOC ) )
 
 	if( $show_hvac_runtime )
 	{
-		if( $row[ 'heat_runtime' ] != 'VOID' ) $MyData->addPoints( $row[ 'heat_runtime' ], 'Heat' );
-		else $MyData->addPoints( VOID, 'Heat' );
+		if( $row[ 'heat_runtime' ] != 'VOID' )
+            $MyData->addPoints( $row[ 'heat_runtime' ], 'Heat' );
+		else
+            $MyData->addPoints( VOID, 'Heat' );
 
-		if( $row[ 'cool_runtime' ] != 'VOID' ) $MyData->addPoints( $row[ 'cool_runtime' ], 'Cool' );
-		else $MyData->addPoints( VOID, 'Cool' );
+		if( $row[ 'cool_runtime' ] != 'VOID' )
+            $MyData->addPoints( $row[ 'cool_runtime' ], 'Cool' );
+		else
+            $MyData->addPoints( VOID, 'Cool' );
 	}
 }
 
@@ -293,21 +323,21 @@ $MyData->setSerieDrawable( 'Indoor Max', FALSE );
 /**
 	* START of common block - this code should be identical for all charts so that they have a common look and feel
 	*/
-$myPicture = new pImage( 900, 430, $MyData );	// Create the pChart object
-$myPicture->Antialias = FALSE;								// Turn OFF Antialiasing (it draws faster)
+$myPicture = new Image( $chart_width, $chart_height, $MyData );	// Create the pChart object
+$myPicture->Antialias = TRUE; //FALSE;								// Turn OFF Antialiasing (it draws faster)
 
 // Draw the background
 $Settings = array( 'R' => 170, 'G' => 183, 'B' => 87, 'Dash' => 1, 'DashR' => 190, 'DashG' => 203, 'DashB' => 107, 'Alpha' => 60 );
-$myPicture->drawFilledRectangle( 0, 0, 900, 430, $Settings );
+$myPicture->drawFilledRectangle( 0, 0, $chart_width, $chart_height, $Settings );
 
 // Overlay with a gradient
 $Settings = array( 'StartR' => 219, 'StartG' => 231, 'StartB' => 139, 'EndR' => 1, 'EndG' => 138, 'EndB' => 68, 'Alpha' => 50 );
-$myPicture->drawGradientArea( 0, 0, 900, 430, DIRECTION_VERTICAL, $Settings );
+$myPicture->drawGradientArea( 0, 0, $chart_width, $chart_height, DIRECTION_VERTICAL, $Settings );
 $Settings = array( 'StartR' => 0, 'StartG' => 0, 'StartB' => 0, 'EndR' => 50, 'EndG' => 50, 'EndB' => 50, 'Alpha' => 80 );
-$myPicture->drawGradientArea( 0, 0, 900,	20, DIRECTION_VERTICAL, $Settings );
+$myPicture->drawGradientArea( 0, 0, $chart_width,	20, DIRECTION_VERTICAL, $Settings );
 
 // Add a border to the picture
-$myPicture->drawRectangle( 0, 0, 899, 429, array( 'R' => 0, 'G' => 0, 'B' => 0 ) );
+$myPicture->drawRectangle( 0, 0, $chart_width - 1, $chart_height - 1, array( 'R' => 0, 'G' => 0, 'B' => 0 ) );
 
 // Set font for all descriptive text
 $myPicture->setFontProperties( array( 'FontName' => 'Copperplate_Gothic_Light.ttf', 'FontSize' => 10 ) );
@@ -317,13 +347,14 @@ $myPicture->drawText( 10, 14, $picTitle, array( 'R' => 255, 'G' => 255, 'B' => 2
 $myPicture->drawText( 60, 55, $chartTitle, array( 'FontSize' => 12, 'Align' => TEXT_ALIGN_BOTTOMLEFT ) );
 
 // Write the picture timestamp
-$myPicture->drawText( 680, 14, 'Last update ' . date( 'Y-m-d H:i' ), array( 'R' => 255, 'G' => 255, 'B' => 255) );
+$myPicture->drawText( $chart_width - 220, 14, 'Last update ' . date( 'Y-m-d H:i' ), array( 'R' => 255, 'G' => 255, 'B' => 255) );
 
 // Define the chart area
-$graphAreaStartX = 60;
-$graphAreaEndX = 850;
-$graphAreaStartY = 60;
-$graphAreaEndY = 390;
+$graphAreaStartX = .066667 * $chart_width;
+$graphAreaEndX   = $chart_width - $graphAreaStartX;
+$graphAreaStartY = .1395 * $chart_height;
+$graphAreaEndY   = $chart_height - $graphAreaStartY;
+
 $myPicture->setGraphArea( $graphAreaStartX, $graphAreaStartY, $graphAreaEndX, $graphAreaEndY );
 
 // Draw the scale
@@ -335,26 +366,28 @@ $myPicture->drawScale( $scaleSettings );
 // Write the chart legend - convert all legends to left aligned because there is no auto right alignment
 $myPicture->setFontProperties( array( 'FontName' => 'pf_arma_five.ttf', 'FontSize' => 6 ) );
 $myPicture->setShadow( TRUE, array( 'X' => 1, 'Y' => 1, 'R' => 0, 'G' => 0, 'B' => 0, 'Alpha' => 10 ) );
-$myPicture->drawLegend( 60, 412, array( 'Style' => LEGEND_NOBORDER, 'Mode' => LEGEND_HORIZONTAL ) );
+$myPicture->drawLegend( $chart_width * .06667, $chart_height - 18, array( 'Style' => LEGEND_NOBORDER, 'Mode' => LEGEND_HORIZONTAL ) );
 // END of common block
-
 
 // Draw the chart(s)
 if( $indoor == 0 || $indoor == 2 )
 {
 	$Settings = array( 'AreaR' => 200, 'AreaG' => 100, 'AreaB' => 100, 'AreaAlpha' => 80 );
-	$myPicture->drawZoneChart( 'Outdoor Min', 'Outdoor Max', $Settings );
+    $myPicture->drawZoneChart( 'Outdoor Min', 'Outdoor Max', $Settings );
+    $myPicture->drawZoneChart( 'Outdoor Min', 'Outdoor Max');
 }
 if( $indoor == 1 || $indoor == 2 )
 {
 	$Settings = array( 'AreaR' => 100, 'AreaG' => 100, 'AreaB' => 200, 'AreaAlpha' => 80 );
-	$myPicture->drawZoneChart( 'Indoor Min', 'Indoor Max', $Settings );
+    $myPicture->drawZoneChart( 'Indoor Min', 'Indoor Max', $Settings );
+    $myPicture->drawZoneChart( 'Indoor Min', 'Indoor Max');
 }
 
 if( $show_hvac_runtime )
 {	// If the runtimes were requested and data loaded then draw the run times as bar charts
 
 	// Setting a non-existent series drawability to FALSE creates an error - hence the logic for what NOT to draw.
+
 	if( $indoor == 0 || $indoor == 2 )
 	{
 		$MyData->setSerieDrawable( 'Outdoor Min', FALSE );
@@ -376,7 +409,6 @@ if( $show_hvac_runtime )
 	$myPicture->drawThreshold( 600, array( 'AxisID' => 1, 'WriteCaption' => TRUE, 'Caption' => '10 Hours', 'BoxAlpha' => 90, 'BoxR' => 255, 'BoxG' => 40, 'BoxB' => 70, 'Alpha' => 100, 'Ticks' => 1, 'R' => 255, 'G' => 40, 'B' => 70 ) );
 	$myPicture->drawThreshold( 900, array( 'AxisID' => 1, 'WriteCaption' => TRUE, 'Caption' => '15 Hours', 'BoxAlpha' => 90, 'BoxR' => 255, 'BoxG' => 40, 'BoxB' => 70, 'Alpha' => 100, 'Ticks' => 1, 'R' => 255, 'G' => 40, 'B' => 70 ) );
 }
-
 // Render the picture
 $myPicture->autoOutput( 'images/weekly_chart.png' );
 ?>
