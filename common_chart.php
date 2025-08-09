@@ -3,8 +3,10 @@ require_once( 'common.php' );
 
 // Modify the font path for the GD library - because graphic renders are lame?
 // Must use absolute and not relative paths.
-$my_fontpath = realpath( '../../common/php/pChart/fonts' );														// font path for this application
-putenv( 'GDFONTPATH='.$my_fontpath );
+$pChart_fontpath = realpath( '../../common/php/pChart/fonts' );														// font path for this application
+$my_fontpath = realpath( 'lib/fonts' );                                                                                                         // font path for this application
+putenv( 'GDFONTPATH='.$pChart_fontpath.PATH_SEPARATOR.$my_fontpath );
+
 
 require_once ('c-pChart/constants.php');
 require_once ('c-pChart/src/BaseDraw.php');
