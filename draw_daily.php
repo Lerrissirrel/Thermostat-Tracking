@@ -386,17 +386,12 @@ foreach( $days as $show_date )
 
 			if( $show_indoor_humidity == 1 )
 			{
-                                $tmp_hum = $row['indoor_humidity'];
-                                // -1 indicates "no such sensor" for the models that don't report it
-                                if ($tmp_hum == '-1.00' || $tmp_hum == 'VOID')
-                                {
-                                   $tmp_hum = VOID; 
-                                }
-				$MyData->addPoints( $tmp_hum, 'Indoor Humidity' );
+				$MyData->addPoints( (($row['indoor_humidity'] == 'VOID' || $row['indoor_humidity'] == '-1.00') ? VOID : $row['indoor_humidity']), 'Indoor Humidity' );
 			}
 			if( $show_outdoor_humidity == 1 )
 			{
-				$MyData->addPoints( ($row['outdoor_humidity'] == 'VOID' ? VOID : $row['outdoor_humidity']), 'Outdoor Humidity' );
+                                // -1 indicates "no such sensor" for the models that don't report it
+				$MyData->addPoints( (($row['outdoor_humidity'] == 'VOID' || $row['outdoor_humidity'] == '-1.00') ? VOID : $row['outdoor_humidity']), 'Outdoor Humidity' );
 			}
 
 		}
