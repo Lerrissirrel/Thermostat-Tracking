@@ -1,4 +1,4 @@
-<script type='text/javascript'>
+<script>
 
 	// This .class file is not 100% self-cotained.  It presently requies JavaScript code form teh daily_tab.class
 
@@ -8,22 +8,22 @@
 function display_historic_chart()
 {
 	var show_thermostat_id = 'id=' + document.getElementById( 'chart.history.thermostat' ).value;
-	var show_indoor = 'Indoor=' + document.getElementById( 'history_selection' ).value;
-	var show_hvac_runtime = 'show_hvac_runtime=' + document.getElementById( 'show_hvac_runtime' ).checked;
 
-	var interval_measure_string = 'interval_measure=' + document.getElementById( 'interval_measure' ).value;
-	var interval_length_string = 'interval_length=' + document.getElementById( 'interval_length' ).value;
-
-	var history_to_date_string = 'history_to_date=' + document.getElementById( 'chart.history.toDate' ).value;
+	var interval_measure_string = 'interval_measure=' + document.getElementById( 'chart.history.interval.group' ).value;
+	var interval_length_string = 'interval_length=' + document.getElementById( 'chart.history.interval.length' ).value;
+        var history_to_date_string = 'history_to_date=' + document.getElementById( 'chart.history.toDate' ).value;
 
 	var no_cache_string = 'nocache=' + Math.random(); // Browsers are very clever with image caching.	That cleverness breaks this web page's function.
 
-	var window_width             = 'chart.history.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-	var window_height            = 'chart.history.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+	var url_string = show_thermostat_id + '&' +  interval_measure_string + '&' + interval_length_string + '&' + history_to_date_string + '&' + no_cache_string;
+//	console.log( url_string );
+           $.ajax({
+                   url: "gendata_history.php",
+                   data: url_string,
+                   type: "post",
+                   success: function() {echart_history_draw()}
+                 });
 
-	var url_string = 'draw_weekly.php?' + show_thermostat_id + '&' + show_indoor + '&' + show_hvac_runtime + '&' + interval_measure_string + '&' + interval_length_string + '&' + history_to_date_string	+ '&' + no_cache_string + '&' + window_width + '&' + window_height;
-	console.log( url_string );
-	document.getElementById( 'history_chart' ).src = url_string;
 }
 
 function foo_save_window_size()
@@ -49,17 +49,18 @@ class History
 	function displayTab()
 	{
 		global $thermostats;
+		global $thermostats_disabled;
 		global $show_date;
 		$htmlString = '';
 
-		$htmlString .= "<div class='tab' id='history'> <a href='#history'> History </a>";
-		$htmlString .= "	<div class='container'>";
-		$htmlString .= "		<div class='tab-toolbar'>";
+		$htmlString .= "<div class='tab' id='history'><a href='#history'> History </a>";
+		$htmlString .= "	<div class='container' style='display: flex;flex-flow: column;width:100%'>";
+		$htmlString .= "		<div class='tab-toolbar' style='text-align: center;width:100%'>";
 		$htmlString .= "			<input type='button' onClick='javascript: display_historic_chart();' value='Show'>";
-		$htmlString .= "			<select id='chart.history.thermostat'>";
+		$htmlString .= "			Thermostat&nbsp;<select id='chart.history.thermostat' onChange='javascript: saveThermostat(\"historic\")'>";
 
 		// Let user pick which thermostat to show, but always show ONLY (new feature - show multiple?) one of them!
-		foreach( $thermostats as $thermostatRec )
+		foreach( array_merge($thermostats, $thermostats_disabled) as $thermostatRec )
 		{
 			$htmlString .= "<option ";
 			if( isset($id) && $id == $thermostatRec['id'] )
@@ -70,51 +71,50 @@ class History
 		}
 		$htmlString .= "			</select>";
 
+//                $htmlString .= "                        </div>"; // table-cell
+//                $htmlString .= "                </div>"; // tab-toolbar
+ //               $htmlString .= "</div>"; // table-column
+  //              $htmlString .= "<div style='display: table-column;width:50%'>";
+//		$htmlString .= "		<div class='tab-toolbar' style='display: flex; width:50%'>";
+//                $htmlString .= "                </div>"; // tab-toolbar
+//		$htmlString .= "		<div class='tab-toolbar' style='justify-content: space-between; width:100%'>";
 		// Let user pick which temperature to show, but ALWAYS show at least one of them!
-		$htmlString .= "			<select id='history_selection'>";
-		$htmlString .= "				<option value='0' selected>Outoor</option>";
-		$htmlString .= "				<option value='1'>Indoor</option>";
-		$htmlString .= "				<option value='2'>Both</option>";
-		$htmlString .= "			</select>";
-
-		$htmlString .= "			Timeframe <input type='text' id='interval_length' value='21' size='3'>";
-		$htmlString .= "			<select id='interval_measure' style='width: 65px'>";
+		$htmlString .= "			<br>Timeframe <input type='text' id='chart.history.interval.length' value='21' size='3' onChange='javascript: saveDateData(\"historic\");'>";
+		$htmlString .= "			<select id='chart.history.interval.group' style='width: 5em' onChange='javascript: saveDateData(\"historic\");'>";
 		$htmlString .= "				<option value='0' selected>days</option>";
 		$htmlString .= "				<option value='1'>weeks</option>";
 		$htmlString .= "				<option value='2'>months</option>";
+		$htmlString .= "				<option value='3'>years</option>";
 		$htmlString .= "			</select>";
 
-		$htmlString .= "			ending on <input type='date' id='chart.history.toDate' size='10' value='{$show_date}' max='{$show_date}' step='1'/>";
+		$htmlString .= "			<span>ending on </span><input type='date' id='chart.history.toDate' onChange='javascript: saveDateData(\"historic\");' size='10' value='{$show_date}' max='{$show_date}' step='1'>";
 
-		$htmlString .= "			&nbsp;&nbsp;Optionally show HVAC runtimes<input type='checkbox' id='show_hvac_runtime' name='show_hvac_runtime' onChange='javascript: toggle_daily_flag( \"show_hvac_runtime\" );'/>";
-		$htmlString .= "			<input type='button' onClick='javascript: deleteCookies(1);' value='Un-save settings' style='float: right;'>";
-		$htmlString .= "		</div>";
+//                $htmlString .= "                        </div>"; // table-cell
+                $htmlString .= "                </div>"; // tab-toolbar
+   //             $htmlString .= "</div>"; // tab-table-column
 
-		$htmlString .= "		<div class='content'>";
-		$htmlString .= "			<br>";
-		$htmlString .= "			<div class='thermo_chart'>";
-		$htmlString .= "				<img id='history_chart' class='daily_temp_chart' src='images/need_default.png' alt='History Graph' title='History Graph'>";
-		$htmlString .= "			</div>";
+//		$htmlString .= "		<div class='content' style='height:100%;width:100%;flex: 1 1 auto'>";
+		$htmlString .= "			<span class='thermo_chart' style='flex: 1 1 auto;border:3px solid black' id='history_echart'>";
+//		$htmlString .= "				<img id='history_chart' class='daily_temp_chart' src='images/need_default.png' alt='History Graph' title='History Graph'>";
+		$htmlString .= "			</span>"; // thermo_chart
 
 		// These initializations must fall AFTER the declaration of various HTML DOM variables
 		// All of these preference values should be tested before use, don't let null (or un-set) mess up the values.
 		// Preently preferences are stored in cookies.
-		$htmlString .= "<script type='text/javascript'>";
+		$htmlString .= "<script>";
 
 		// In JavaScript, a literal/string value of "false" is a string of non zero length and so it tests as logically true unless you look for the literal string "true"
 
 		// Restore user preference/cookie for showing/hiding hvac runtime
-		$htmlString .= "if( getCookie('show_hvac_runtime') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('show_hvac_runtime').checked = true;";
-		$htmlString .= "}";
 
 		// Draw the chart
+                $htmlString .= "                                loadDateData( 'historic' );";
+                $htmlString .= "                                loadThermostat( \"historic\" );";
 		$htmlString .= "				display_historic_chart();";
 		$htmlString .= "			</script>";
-		$htmlString .= "		</div>";
-		$htmlString .= "	</div>";
-		$htmlString .= "</div>";
+//		$htmlString .= "		</div>"; // content
+		$htmlString .= "	</div>"; // container
+		$htmlString .= "</div>"; // tab
 		$htmlString .= "<div class='tab_gap'></div>";
 
 
@@ -124,3 +124,529 @@ class History
 	}
 }
 ?>
+<script>
+function echart_history_draw()
+{
+//  console.log("Got to echart_history_draw()");
+
+var ajax1 = $.ajax({
+    url: "php/read_hist_data.php",
+    method: "GET",
+    dataType: "text",
+    async: true,
+    success: function(result) { }
+});
+
+$.when(ajax1).done(function(mydata) {
+
+//      console.log(mydata);
+      var my_array = JSON.parse(mydata);
+//      console.log(my_array);
+      const time = my_array.map(o => (o.Label * 1000));
+      const outdoor_min = my_array.map(o => o.Outdoor_Min);
+      const outdoor_max = my_array.map(o => o.Outdoor_Max);
+      const indoor_min = my_array.map(o => o.Indoor_Min);
+      const indoor_max = my_array.map(o => o.Indoor_Max);
+      const heat_runtime = my_array.map(o => o.Heat_Runtime);
+      const cool_runtime = my_array.map(o => o.Cool_Runtime);
+
+
+var chartDom = document.getElementById('history_echart');
+var myChart = echarts.init(chartDom);
+myChart.dispose();
+myChart = echarts.init(chartDom, get_current_theme());
+
+var option;
+
+let outdoor_dif = outdoor_max.map((v, i) => outdoor_min[i] - v);
+let indoor_dif  = indoor_max.map((v, i) => indoor_min[i] - v);
+
+let temp_max = outdoor_max.reduce(function (a, b) {
+    return Math.max(a, b);
+}, -1);
+
+let temp_min = outdoor_min.reduce(function (a, b) {
+    return Math.min(a, b);
+}, 1000);
+
+
+let red_hot = 110;
+
+//cconsole.log("outdoor temp max: "+temp_max+"  temp_min: "+temp_min);
+
+let outdoor_top_red     = Math.min(255, (temp_max/red_hot) * 255)
+let outdoor_top_blue    = 255 - outdoor_top_red;
+let outdoor_bottom_red  = Math.min(255, (temp_min/red_hot) * 255);
+let outdoor_bottom_blue = 255 - outdoor_bottom_red;
+
+//cconsole.log("top red: "+outdoor_top_red);
+//cconsole.log("top blue: "+outdoor_top_blue);
+//cconsole.log("bottom red: "+outdoor_bottom_red);
+//cconsole.log("bottom blue: "+outdoor_bottom_blue);
+
+temp_max = indoor_max.reduce(function (a, b) {
+    return Math.max(a, b);
+}, -1);
+
+temp_min = indoor_min.reduce(function (a, b) {
+    return Math.min(a, b);
+}, 1000);
+
+var total_heat = (heat_runtime.reduce(function(a, b) { return Number(a) + Number(b); }, 0)/60).toFixed(1);
+var total_cool = (cool_runtime.reduce(function(a, b) { return Number(a) + Number(b); }, 0)/60).toFixed(1);
+
+//cconsole.log("indoor temp max: "+temp_max+"  temp_min: "+temp_min);
+
+let indoor_top_red     = Math.min(255, (temp_max/red_hot) * 255);
+let indoor_top_blue    = 255 - indoor_top_red;
+let indoor_bottom_red  = Math.min(255, (temp_min/red_hot) * 255);
+let indoor_bottom_blue = 255 - indoor_bottom_red;
+
+//cconsole.log("top red: "+indoor_top_red);
+//cconsole.log("top blue: "+indoor_top_blue);
+//cconsole.log("bottom red: "+indoor_bottom_red);
+//cconsole.log("bottom blue: "+indoor_bottom_blue);
+option = {
+  title: {
+    left: 'center',
+    text: 'Thermostat data\n'+(new Intl.DateTimeFormat('en-US').format(time[0]))+" to "+(new Intl.DateTimeFormat('en-US').format(time[time.length-1]))+'   Total hours Heat: '+total_heat+' Total hours Cool: '+total_cool
+  },
+//  backgroundColor: '#f0f4ff',
+//   backgroundColor: 'rgba(200, 255, 200, .7)' ,
+//  backgroundColor: '#f4f4ff',
+  legend: {
+    orient: 'horizontal',
+    data: ['Outdoor High', 'Indoor High', 'Heat Runtime', 'Cool Runtime'],
+    selected: { 'Indoor Humidity' : false , 'Fan' : false},
+    bottom: 53,
+    formatter: (name) => {
+      if (name == 'Outdoor High')
+        return 'Outdoor';
+      else if (name == 'Indoor High')
+        return 'Indoor';
+      else
+        return name;
+    },
+  },
+  grid: {
+   show: true,
+//   backgroundColor: 'rgba(230, 255, 230, 1)' ,
+   bottom: 95,
+   left: '5%',
+   right: '5%',
+   top: '15%',
+  },
+
+  dataZoom: [
+    {
+      type: 'inside',
+      filterMode: 'none',
+      minValueSpan: 24 * 7 * 3600 * 1000,
+      // minValueSpan: 3600 * 12.5 * 1000,
+//      maxValueSpan: 3600 * 24 * 1000 * 5,
+//      start: 1,
+//      end: 100
+    },
+    {
+      start: 0,
+      end: 100
+    }
+ ],
+  toolbox: {
+    top: 6,
+    orient: 'vertical',
+    itemSize: 10,
+    feature: {
+      dataZoom: {
+        yAxisIndex: 'none'
+      },
+      restore: {},
+      saveAsImage: {}
+    },
+  },
+
+      /////  X Axis /////
+      xAxis: {
+        type: 'time',
+        axisLabel: {
+          formatter: {
+            day: '{M}/{d}',
+            month: '{M}/{yy}',
+          },
+        },
+      },
+      /////  Y Axis /////
+      yAxis: [
+         {
+           type: 'value',
+           name: "Temperature",
+           alignTicks: true,
+           min: function (value) { if (Math.floor(Math.trunc(value.min) >= 0)) { return 0; } else {return Math.floor(Math.trunc((value.min - 10) / 10)) * 10}},
+           max: function (value) { return  Math.ceil(Math.trunc((value.max + 15) / 10)) * 10 },
+         },
+         {
+           type: 'value',
+           name: "Runtime",
+//           data: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 28, 19, 20, 21, 22, 23, 24],
+           min: 0,
+           max: 24,
+           alignTicks: true,
+           axisLabel: {
+             formatter: function (value) { if (value == value.toFixed(0)) {return value} else { return value.toFixed(0) } },
+           }
+         }   
+      ],
+      /////  Tooltop /////
+      tooltip: {
+            trigger: 'axis',
+      },
+      /////  Series /////
+      series: [
+        {
+          /////  Series - Outdoor Low /////
+          name: 'Outdoor High',
+          symbol: 'none',
+          type: 'line',
+          stack: 'x',                  // stack name
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+           data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        outdoor_max[len]
+                    ]);
+                }
+                return d;
+            })()
+        },
+        {
+          /////  Series - Outdoor Diff /////
+           name: 'Outdoor Diff',
+          symbol: 'none',
+           data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        outdoor_dif[len]
+                    ]);
+                }
+                return d;
+            })(),
+
+          type: 'line',
+          stack: 'x',                  // stack name
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+          stackStrategy: 'positive',   // strategy
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+          symbol: 'none',              // hide symbol
+          areaStyle: { 
+             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ 
+                offset: 0, color: 'rgb('+outdoor_top_red+', 0, '+outdoor_top_blue+')' 
+             }, 
+             { 
+                offset: 1, color: 'rgb('+outdoor_bottom_red+', 0, '+outdoor_bottom_blue+')' 
+             }]) 
+          },
+          tooltip: {
+            show: false                // hide value on tooltip
+          }
+        },
+        {
+          /////  Series - Outdoor Low /////
+          name: 'Outdoor Low',
+          symbol: 'none',
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+           data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        outdoor_min[len]
+                    ]);
+                }
+                return d;
+            })(),
+
+          type: 'line',
+        },
+        {
+          /////  Series - Indoor Max /////
+          name: 'Indoor High',
+          symbol: 'none',
+          type: 'line',
+          stack: 'xx',                  // stack name
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+           data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        indoor_max[len]
+                    ]);
+                }
+                return d;
+            })()
+        },
+        {
+          /////  Series - Indoor Diff /////
+           name: 'Indoor Diff',
+          symbol: 'none',
+           data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        indoor_dif[len]
+                    ]);
+                }
+                return d;
+            })(),
+
+          type: 'line',
+          stack: 'xx',                  // stack name
+          stackStrategy: 'positive',   // strategy
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+          symbol: 'none',              // hide symbol
+          areaStyle: { 
+             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ 
+                offset: 0, color: 'rgb('+indoor_top_red+', 0, '+indoor_top_blue+')' 
+             }, 
+             { 
+                offset: 1, color: 'rgb('+indoor_bottom_red+', 0, '+indoor_bottom_blue+')' 
+             }]) 
+          },
+          tooltip: {
+            show: false                // hide value on tooltip
+          }
+        },
+        {
+          /////  Series - Indoor Low /////
+          name: 'Indoor Low',
+          symbol: 'none',
+          lineStyle: {
+            opacity: 0                 // hide line
+          },
+           data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        indoor_min[len]
+                    ]);
+                }
+                return d;
+            })(),
+
+          type: 'line',
+        },
+        {
+          /////  Series - Heat Runtime /////
+            name: 'Heat Runtime',
+          symbol: 'none',
+            type: 'bar',
+            yAxisIndex: 1,
+            itemStyle: {color: 'red'},
+            data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        Number(heat_runtime[len]/60).toFixed(1)
+                    ]);
+                }
+                return d;
+            })(),
+        },
+        {
+          /////  Series - Cool Runtime /////
+            name: 'Cool Runtime',
+          symbol: 'none',
+            type: 'bar',
+            yAxisIndex: 1,
+            itemStyle: {color: 'blue'},
+            data: (function () {
+                var d = [];
+                var len = 0;
+                while (len++ < time.length) {
+                    d.push([
+                        time[len],
+                        Number(cool_runtime[len]/60).toFixed(1)
+                    ]);
+                }
+                return d;
+            })(),
+        }
+      ],
+    };
+
+option && myChart.setOption(option);
+
+// Handler for screen resize.  It redraws the charts dynamically and handles portrait vs landscape orientation
+// It should be in another file somewhere as it's not specific to the history chart!
+window.onresize = function() {
+  history_chart = echarts.getInstanceByDom(document.getElementById('history_echart'));
+  daily_chart = echarts.getInstanceByDom(document.getElementById('echarts_chart'));
+  compare_echart = echarts.getInstanceByDom(document.getElementById('compare_echart'));
+  if (history_chart)
+  {
+     history_chart.resize();
+  }
+  if (daily_chart)
+  {
+     daily_chart.resize();
+  }
+  if (compare_echart)
+  {
+     compare_echart.resize();
+  }
+  port_or_land();
+  //console.log("Resize");
+}
+
+// The History tab has a summary at the top; this routine recalculates the summary based on what is currently within
+// scope of the chart zoom
+myChart.on('dataZoom', function (params) {
+//    console.log("2 Got here: "+JSON.stringify(params));
+    var start = 0, end = 0;
+
+    if (typeof params.batch !== 'undefined')
+    {
+       start = params.batch[0].start;
+       end = params.batch[0].end;
+    }
+    else if (typeof params.start !== 'undefined')
+    {
+       start = params.start;
+       end = params.end;
+    }
+    else return;
+
+//    console.log('start: '+start+' end: '+end);
+    var start_index_heat = Math.round(heat_runtime.length*(start/100));
+    var start_index_cool = Math.round(cool_runtime.length*(start/100));
+    var start_index_time = Math.round(time.length*(start/100));
+    var   end_index_heat = Math.round(heat_runtime.length*(end/100))-1;
+    var   end_index_cool = Math.round(cool_runtime.length*(end/100))-1;
+    var   end_index_time = Math.round(time.length*(end/100))-1;
+    var len_heat = start_index_heat;
+    var len_cool = start_index_cool;
+    var total_heat = 0;
+    var total_cool = 0;
+
+    //console.log('heat start: '+start_index_heat+' end: '+end_index_heat+' length: '+heat_runtime.length);
+    //console.log('cool start: '+start_index_cool+' end: '+end_index_cool+' length: '+cool_runtime.length);
+
+    while (len_heat++ < end_index_heat)
+    {
+       total_heat += Number(heat_runtime[len_heat]);
+    }
+
+    while (len_cool++ < end_index_cool)
+    {
+       total_cool += Number(cool_runtime[len_cool]);
+    }
+    //console.log('total heat: '+(total_heat/60).toFixed(1)+' total cool: '+(total_cool/60).toFixed(1));
+    myChart.setOption({
+      title: {
+        left: 'center',
+        text: 'Thermostat data from '+(new Intl.DateTimeFormat('en-US').format(time[start_index_time]))+" to "+(new Intl.DateTimeFormat('en-US').format(time[end_index_time]))+'   Total hours Heat: '+(total_heat/60).toFixed(1)+' Total hours Cool: '+(total_cool/60).toFixed(1)
+      },
+    });
+});
+
+myChart.on('legendselectchanged', function(params) {
+
+  suppressSelection(myChart, params);  
+
+  // Add custom functionality here 
+
+//  window.alert(params.name + ' was clicked');
+});
+
+});
+}
+
+// The Indoor and Outdoor temperatures on the graph are really two lines each (max and min for each x-axis point
+// The space in between is shaded making it look like it's one series  Since we want to be able to turn the display
+// of them on and off, we need to fake things to look like it's really one series.  This routine does that
+// by toggling the high/low/diff display any time the "High"s (which is the only legend item displayed but displayed as 
+// "Outdoor" and "Indoor" in the legend) are clicked
+function suppressSelection(chart, params) {
+  chart.setOption({ animation: false });
+  //console.log('pressed: *'+params.name+'*'+params.selected[params.name]);
+
+  if (params.name == 'Outdoor High')
+  {
+    if ( params.selected[params.name])
+    {
+       chart.dispatchAction({
+         type: 'legendSelect',
+         name: 'Outdoor Low'
+       });
+       chart.dispatchAction({
+         type: 'legendSelect',
+         name: 'Outdoor Diff'
+       });
+    }
+    else
+    {
+       chart.dispatchAction({
+         type: 'legendUnSelect',
+         name: 'Outdoor Low'
+       });
+       chart.dispatchAction({
+         type: 'legendUnSelect',
+         name: 'Outdoor Diff'
+       });
+    }
+  }
+  if (params.name == 'Indoor High')
+  {
+    if ( params.selected[params.name])
+    {
+       chart.dispatchAction({
+         type: 'legendSelect',
+         name: 'Indoor Low'
+       });
+       chart.dispatchAction({
+         type: 'legendSelect',
+         name: 'Indoor Diff'
+       });
+    }
+    else
+    {
+       chart.dispatchAction({
+         type: 'legendUnSelect',
+         name: 'Indoor Low'
+       });
+       chart.dispatchAction({
+         type: 'legendUnSelect',
+         name: 'Indoor Diff'
+       });
+    }
+  }
+
+  chart.setOption({ animation: true });
+}
+</script>

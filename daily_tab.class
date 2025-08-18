@@ -1,35 +1,4 @@
-<script type='text/javascript'>
-/**
-	* chart is one of 'daily' or 'history'
-	* sytle is one of 'chart' or 'table'
-	*
-*/
-
-var number_of_clears = 0;
-
-function remove_table()
-{
-	var border_string;
-
-	if (number_of_clears == 0)
-	{
-		display_chart( 'daily', 'table' );
-		number_of_clears = 1;
-		document.getElementById('chart_button').value = "Clear it";
-	}
-	else
-	{
-		var div = document.getElementById('daily_temperature_table');
-		while(div.firstChild) {
-			div.removeChild(div.firstChild);
-		}
-		border_string = 'border: '+number_of_clears+'px';
-        	document.getElementById('daily_temperature_table').style = border_string;
-		document.getElementById('chart_button').value = "Chart it";
-		number_of_clears = 0;
-	}
-}
-
+<script>
 
 function reset_date()
 {
@@ -51,293 +20,1075 @@ function reset_date()
 	today = '' + today.getFullYear() + '-' + monthString + '-' + dateString;
 	
 	document.getElementById( 'chart.daily.toDate' ).value = today;
-	
-        display_chart( 'daily', 'chart' );	// Now go show the new interval
+        saveDateData('daily');
+        display_chart();	// Now go show the new interval
 }
 
-
-function display_chart( chart, style )
+function display_chart()
 {
-	var chart_target;
-	var table_flag = '';
-
-	if( chart == 'daily' && style == 'chart' )
-	{
-		var random_number = Math.random();
-		chart_target = document.getElementById( 'daily_temperature_chart' );
-		chart_target.src = 'images/daily_chart_greyscale.png?dummy=' + random_number;
-//		console.log("image src: "+chart_target.src);
-//		chart_target.src = 'images/daily_temperature_placeholder.png';
-		// By using setTimeout we can separate the drawing of the placeholder image from the actual chart such that the browser will always draw the placeholder
-		setTimeout(function(){ display_chart_build_and_display(chart, style, 'false', chart_target);chart_target = document.getElementById( 'daily_temperature_chart' );}, 500);
-	}
-	else if( chart == 'daily' && style == 'table' )
-	{
-	/* Change to use ajax model
-		table_flag = 'table_flag=true';
-		chart_target = document.getElementById( 'daily_temperature_table' );
-		chart_target.innerHTML = '';
-		display_chart_build_and_display( chart, style, table_flag, chart_target );
-		*/
-                document.getElementById('daily_temperature_table').style = 'border: solid black 1px; height: 200px';
-		update( 'daily_table' );
-	}
-	else
-	{
-		alert( 'You asked for '+chart+' and '+style+' and I do not know how to do that (yet).' );
-		return;
-	}
+   var chart_target;
+   var random_number = Math.random();
+   chart_target = document.getElementById( 'echarts_chart' );
+   display_chart_build_and_display(chart_target);
 }
-function save_window_size()
+
+function display_chart_build_and_display(chart_target )
 {
-   var window_width             = 'chart.daily.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-   var window_height            = 'chart.daily.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-	
-//	    display_chart( 'daily', 'chart' );	// Now go show the new interval
+   // PHP actually converts the periods in the variable names into underscores, so when gendata_daily.php GETs them, 
+   // daily.interval.length is actually the variable daily_interval_length
+   var show_thermostat_id       = 'id='                          + document.getElementById( 'chart.daily.thermostat' ).value;
+   var daily_interval_length    = 'chart.daily.interval.length=' + document.getElementById( 'chart.daily.interval.length' ).value;
+   var daily_interval_group     = 'chart.daily.interval.group='  + document.getElementById( 'chart.daily.interval.group' ).value;
+   var daily_to_date_string     = 'chart.daily.toDate='          + document.getElementById( 'chart.daily.toDate' ).value;
+   var url_string = '';
+   // Browsers are very clever with image caching.	In this case it breaks the web page function.
+   var no_cache_string = 'nocache=' + Math.random();
 
-   var window_width             = 'chart.history.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-   var window_height            = 'chart.history.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+   url_string = show_thermostat_id + '&' + daily_interval_length  + '&' + daily_interval_group   + '&' + 
+                   daily_to_date_string  + '&' + no_cache_string;
 
-   display_historic_chart();
-
-
+   $.ajax({
+           url: "gendata_daily.php",
+           data: url_string,
+           type: "post",
+           success: function() {echart_draw()}
+          });
 }
-
-function display_chart_build_and_display( chart, style, table_flag, chart_target )
-{
-
-	var show_thermostat_id       = 'id='                          + document.getElementById( 'chart.daily.thermostat' ).value;
-	var daily_source_selection   = 'chart.daily.source='          + document.getElementById( 'chart.daily.source' ).value;
-	var daily_interval_length    = 'chart.daily.interval.length=' + document.getElementById( 'chart.daily.interval.length' ).value;
-	var daily_interval_group     = 'chart.daily.interval.group='  + document.getElementById( 'chart.daily.interval.group' ).value;
-	var daily_to_date_string     = 'chart.daily.toDate='          + document.getElementById( 'chart.daily.toDate' ).value;
-	var show_setpoint_string     = 'chart.daily.showSetpoint='    + document.getElementById( 'chart.daily.showSetpoint' ).checked;
-	var show_heat_cycle_string   = 'chart.daily.showHeat='        + document.getElementById( 'chart.daily.showHeat' ).checked;
-	var show_cool_cycle_string   = 'chart.daily.showCool='        + document.getElementById( 'chart.daily.showCool' ).checked;
-	var show_fan_cycle_string    = 'chart.daily.showFan='	        + document.getElementById( 'chart.daily.showFan' ).checked;
-	var show_outdoor_humid_str   = 'chart.daily.showOutdoorHumidity=' + document.getElementById( 'chart.daily.showOutdoorHumidity' ).checked;
-	var show_indoor_humid_str    = 'chart.daily.showIndoorHumidity='  + document.getElementById( 'chart.daily.showIndoorHumidity' ).checked;
-	var window_width             = 'chart.daily.width=' + window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-	var window_height            = 'chart.daily.height=' + window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-	// Browsers are very clever with image caching.	In this case it breaks the web page function.
-	var no_cache_string = 'nocache=' + Math.random();
-
-	var url_string = '';
-	if( chart == 'daily' )
-	{
-		url_string = 'draw_daily.php';
-		chart_target.src = url_string;
-	}
-	else if( chart == 'history' )
-	{
-		// This space intentionally left blank (actually I don't recall why it was left blank, but everything seems to work)
-	}
-
-//	url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + show_setpoint
-url_string = url_string + '?' + show_thermostat_id + '&' + daily_source_selection + '&' + show_setpoint_string + '&' + table_flag + '&' +
-							 daily_interval_length  + '&' + daily_interval_group   + '&' + daily_to_date_string  + '&' +
-							 show_heat_cycle_string	+ '&' + show_cool_cycle_string + '&' + show_fan_cycle_string + '&' +
-							 show_outdoor_humid_str	+ '&' + show_indoor_humid_str	 + '&' +
-							 no_cache_string        + '&' + window_width             + '&' + window_height;
-
-	if( style == 'chart' )
-	{
-		chart_target.src = url_string;
-	}
-	else if( style == 'table' )
-	{	// Right now it assumes the DAILY table.  Fix that later
-		// Size should be in the CSS file?
-
-	/* Change to use ajax model
-		// Gosh this iframe is a whole load of overkill and I hate it.
-		chart_target.innerHTML = '<iframe src="'+url_string+'" height="100" width="530"></iframe>';
-*/
-		return url_string;
-	}
-//	setTimeout(function(){chart_target = document.getElementById( 'daily_temperature_chart' ); chart_target.style = 'opacity: 1'; }, 350);
-//	chart_target = document.getElementById( 'daily_temperature_chart' );
-//	chart_target.style = 'opacity: 1';
-}
-
-
-/**
-	*	Save the value of the checkbox for later - and update the chart with the new value
-	*/
-
-function toggle_daily_flag( flag )
-{
-	setCookie( flag, document.getElementById(flag).checked );
-}
-
 
 </script>
 
 <?php
 class DailyDetail
 {
-	function __construct()
-	{
-		//echo 'hi!';
-	}
+function __construct()
+{
+	//echo 'hi!';
+}
 
-	// How about making a generic Tab class and extending that to create specific tabs and setting properties to add things to the toolbar?
-	function displayTab()
-	{
-		$htmlString = '';
-//		$htmlString .= "<onresize='save_widow_size()'>";
-		$htmlString .= "<div class='tab' id='daily'> <a href='#daily'> Daily Detail </a>";
-		$htmlString .= "	<div class='container'>";
-		$htmlString .= "		<div class='tab-toolbar'>";
-		$htmlString .= '			<input type="button" onClick="javascript: display_chart( \'daily\', \'chart\' );" value="Show">';
+// How about making a generic Tab class and extending that to create specific tabs and setting properties to add things to the toolbar?
+function displayTab()
+{
+   $htmlString = '';
+   $htmlString .= "<div class='tab' id='daily'> <a href='#daily'> Daily Detail </a>";
+   $htmlString .= "	<div class='container' style='display: flex;flex-flow: column;width:100%'>";
 
-		// Show thermostat chooser
-		$htmlString .= "			<select id='chart.daily.thermostat'>";
-		global $thermostats;
-		foreach( $thermostats as $thermostatRec )
-		{
-			$htmlString .= "<option ";
-			if( isset($id) && $id == $thermostatRec['id'] ) $htmlString .= "'selected' ";
-			$htmlString .= "value='{$thermostatRec['id']}'>{$thermostatRec['name']}</option>";
-		}
-		$htmlString .= "			</select>";
+   $htmlString .= "		<div class='tab-toolbar' style='text-align: center'>";
+   $htmlString .= '			<input type="button" id="show_button" onClick="javascript: display_chart();" value="Show">';
 
-		// Show charting option (which one is selected should be based on user preference/cookie and not hard coded)
-		$htmlString .= "			<select id='chart.daily.source'>";
-		$htmlString .= "				<option value='0'>Outoor</option>";
-		$htmlString .= "				<option value='1'>Indoor</option>";
-		$htmlString .= "				<option value='2' selected>Both</option>";
-		$htmlString .= "			</select>";
+   // Show thermostat chooser
+   $htmlString .= "&nbsp;Thermostat&nbsp;";
+   $htmlString .= "<select id='chart.daily.thermostat' onChange='javascript: saveThermostat(\"daily\");'>";
+   global $thermostats;
+   global $thermostats_disabled;
+   // It may seem odd, but we DO want to allow viewing of disabled stats history
+   foreach( array_merge($thermostats, $thermostats_disabled) as $thermostatRec )
+   {
+      $htmlString .= "<option ";
+      if( isset($id) && $id == $thermostatRec['id'] ) 
+      {
+         $htmlString .= "'selected' ";
+      }
+      $htmlString .= "value='{$thermostatRec['id']}'>{$thermostatRec['name']}</option>";
+   }
+               
+   $htmlString .= "</select>";
 
-		// Show or hide the display of the setpoint temperatures.
-		$htmlString .= "&nbsp;<input type='checkbox' id='chart.daily.showSetpoint' name='chart.daily.showSetpoint' onChange='javascript: toggle_daily_flag( \"chart.daily.showSetpoint\" );'/> Set Point";
+   // Show charting option (which one is selected should be based on user preference/cookie and not hard coded)
 
-		// Show or hide the HVAC run times
-		$htmlString .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; showing Heat<input type='checkbox' id='chart.daily.showHeat' name='chart.daily.showHeat' onChange='javascript: toggle_daily_flag( \"chart.daily.showHeat\" );'/>";
-		$htmlString .= "&nbsp;Cool<input type='checkbox' id='chart.daily.showCool' name='chart.daily.showCool' onChange='javascript: toggle_daily_flag( \"chart.daily.showCool\" );'/>";
-		$htmlString .= "&nbsp;Fan<input type='checkbox' id='chart.daily.showFan'	name='chart.daily.showFan'	onChange='javascript: toggle_daily_flag( \"chart.daily.showFan\" );'/> cycles";
+   /**
+   * When disabling the NEXT button only compare that start date has data.
+   * When disabling the PREV button only compare that the end date has data.
+   * These requirements may necesitate a SQL to find the min and max dates for data in the DB for the specified thermostat.
+   * Should these dates be in the thermostat table as first_contact and last_contact?  I think so.
+   */
 
-		// Show or hide the humidity.
-		$htmlString .= "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; humidity Indoor<input type='checkbox' id='chart.daily.showIndoorHumidity' name='chart.daily.showIndoorHumidity' onChange='javascript: toggle_daily_flag( \"chart.daily.showIndoorHumidity\" );'/>";
-		$htmlString .= "&nbsp;Outdoor<input type='checkbox' id='chart.daily.showOutdoorHumidity' name='chart.daily.showOutdoorHumidity' onChange='javascript: toggle_daily_flag( \"chart.daily.showOutdoorHumidity\" );'/>";
+   $htmlString .= "	<br><input type='button' onClick='javascript: interval(-1);' value='Prev' title='Show previous timeframe' >";
+   $htmlString .= "	&nbsp;&nbsp;&nbsp;&nbsp;<input type=\"text\" id=\"chart.daily.interval.length\" onChange=\"javascript: saveDateData('daily');\" value=\"7\" size=\"3\">";
+   $htmlString .= "	<select id=\"chart.daily.interval.group\" onChange=\"javascript: saveDateData('daily');\" style=\"width: 8ch\">";
+   $htmlString .= "		<option value='0' selected>days</option>";
+   $htmlString .= "		<option value='1'>weeks</option>";
+   $htmlString .= "		<option value='2'>months</option>";
+   $htmlString .= "		<option value='3'>years</option>";
+   $htmlString .= "	</select>";
 
-		// Option to clear preferences/cookies
-		$htmlString .= "<input type='button' onClick='javascript: deleteCookies(0);' value='Un-save settings' style='float: right;'>";	// It floats too far to the right!
+   // Need to change the max value to a date computed by JavaScript so it stays current when the page is open across midnight (without refreshing from server)
+   global $show_date;
+   $htmlString .= "	ending on <input type=\"date\" id=\"chart.daily.toDate\" onChange=\"javascript: saveDateData('daily');\" size=\"10\" value=\"{$show_date}\" max=\"{$show_date}\" step=\"1\">";
+   $htmlString .= "	&nbsp;&nbsp;&nbsp;&nbsp;<input type='button' onClick='javascript: interval(1);' value='Next' title='Show next timeframe' > &nbsp;&nbsp;&nbsp;&nbsp;";
+   $htmlString .= "	<input type='button' onClick='javascript: reset_date(); ' value='Today' title='Set timeframe back to today' >";
 
-		$htmlString .= "<br>";
-
-
-		/**
-			* When disabling the NEXT button only compare that start date has data.
-			* When disabling the PREV button only compare that the end date has data.
-			* These requirements may necesitate a SQL to find the min and max dates for data in the DB for the specified thermostat.
-			* Should these dates be in the thermostat table as first_contact and last_contact?  I think so.
-			*/
-
-//		$htmlString .= "			</script>";
-
-		// The second row of toolbar must be nested in the original div or else a nasty space appears between the two
-//		$htmlString .= "<div class='tab-toolbar'>";
-		$htmlString .= "	<input type='button' onClick='javascript: interval(-1);' value='Previous' title='Show previous timeframe' >";
-		$htmlString .= "	Timeframe <input type='text' id='chart.daily.interval.length' onChange='javascript: saveDateData(\'daily\');' value='7' size='3'>";
-		$htmlString .= "	<select id='chart.daily.interval.group' onChange='javascript: saveDateData(\'daily\');' style='width: 65px'>";
-		$htmlString .= "		<option value='0' selected>days</option>";
-		$htmlString .= "		<option value='1'>weeks</option>";
-		$htmlString .= "		<option value='2'>months</option>";
-		$htmlString .= "		<option value='3'>years</option>";
-		$htmlString .= "	</select>";
-
-		// Need to change the max value to a date computed by JavaScript so it stays current when the page is open across midnight (without refreshing from server)
-		global $show_date;
-		$htmlString .= "	ending on <input type='date' id='chart.daily.toDate' onChange='javascript: saveDateData(\'daily\');' size='10' value='{$show_date}' max='{$show_date}' step='1'/>";
-		$htmlString .= "	<input type='button' onClick='javascript: interval(1);' value='Next' title='Show next timeframe' >";
-		$htmlString .= "	<input type='button' onClick='javascript: reset_date();' value='Today' title='Set timeframe back to today' >";
+//   $htmlString .= "<div style='float:right;width:25%'><input type='button' onClick='javascript: deleteCookies(0);' value='Un-save settings' style='float: right;'></div>";	// It floats too far to the right!
 
 /** Not yet working so hide it from user until it does...
-	<input type='checkbox' id='auto_refresh'		 name='auto_refresh'		 onChange='javascript: timedRefresh();'/>Auto refresh
-	<span id='daily_update' style='float: right; vertical-align: middle; visibility: hidden;'>Countdown to refresh: 00:00</span>
+   <input type='checkbox' id='auto_refresh'		 name='auto_refresh'		 onChange='javascript: timedRefresh();'>Auto refresh
+   <span id='daily_update' style='float: right; vertical-align: middle; visibility: hidden;'>Countdown to refresh: 00:00</span>
 */
-//		$htmlString .= "		</div>";
-		$htmlString .= "</div>";
 
-		$htmlString .= "<div class='content'>";
-		$htmlString .= "<br>";
-		$htmlString .= "<div class='thermo_chart'>";
-//		$htmlString .= "	<img id='daily_temperature_chart' class='daily_temp_chart' src='images/daily_temperature_placeholder.png' alt='The temperatures' style='width: 100%; object-fit: fill'>";
-		$htmlString .= "	<img id='daily_temperature_chart' class='daily_temp_chart' src='images/daily_temperature_placeholder.png' alt='The temperatures' style='width: 100%; object-fit: fill'>";
-		$htmlString .= "</div>";
+   $htmlString .= "</div>";
 
-		$htmlString .= '<input type="button" id="chart_button" onClick="javascript: remove_table();" value="Chart it" style="float: right; margin-right: 20px;">';
-//		$htmlString .= '<input type="button" onClick="javascript: display_chart( \'daily\', \'table\' );" value="Chart it" style="float: right;">';
-			   
-//$htmlString .= "<div id='daily_temperature_table' class='daily_temperature_table'>";
-$htmlString .= "<div id='daily_temperature_table' class='daily_temperature_table'>";
-		// This blank spot gets replaced by a chart chart with data
-		$htmlString .= "</div>";
+   // The echart gets displayed in this <span>
+   $htmlString .= "<span id='echarts_chart' style='flex: 1 0 auto;border:3px solid black' class='thermo_chart'></span>";
 
-		$htmlString .= "</div>";
+   // These initializations must fall AFTER the declaration of various HTML DOM variables
+   // All of these preference values should be tested before use, don't let null (or un-set) mess up the values.
+   // Preently preferences are stored in cookies.
+   $htmlString .= "<script>";
+   $htmlString .= "	loadDateData( 'daily' );";
+   $htmlString .= "	loadThermostat( 'daily' );";
+   // Draw the graph using the applied settings
+   $htmlString .= "        display_chart();";
+   $htmlString .= "</script>";
 
+   $htmlString .= "	</div>";
+   $htmlString .= "</div>";
+   $htmlString .= "<div class='tab_gap'></div>";
 
-		// These initializations must fall AFTER the declaration of various HTML DOM variables
-		// All of these preference values should be tested before use, don't let null (or un-set) mess up the values.
-		// Preently preferences are stored in cookies.
-		$htmlString .= "<script type='text/javascript'>";
-
-		// In JavaScript, a literal/string value of "false" is a string of non zero length and so it tests as logically true unless you look for the literal string "true"
-
-		// Restore user preference/cookie for showing/hiding setpoints
-		$htmlString .= "if( getCookie('chart.daily.showSetpoint') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.showSetpoint').checked = true;";
-		$htmlString .= "}";
-
-		// Restore user preference/cookie for showing/hiding AC operation
-		$htmlString .= "if( getCookie('chart.daily.showCool') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.showCool').checked = true;";
-		$htmlString .= "}";
-
-		// Restore user preference/cookie for showing/hiding heater operation
-		$htmlString .= "if( getCookie('chart.daily.showHeat') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.showHeat').checked = true;";
-		$htmlString .= "}";
-
-		// Restore user preference/cookie for showing/hiding fan operation
-		$htmlString .= "if( getCookie('chart.daily.showFan') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.showFan').checked = true;";
-		$htmlString .= "}";
-
-		// Restore user preference/cookie for showing/hiding indoor humidity
-		$htmlString .= "if( getCookie('chart.daily.showIndoorHumidity') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.showIndoorHumidity').checked = true;";
-		$htmlString .= "}";
-
-		// Restore user preference/cookie for showing/hiding outdoor humidity
-		$htmlString .= "if( getCookie('chart.daily.showOutdoorHumidity') == 'true' )";
-		$htmlString .= "{";
-		$htmlString .= "	document.getElementById('chart.daily.showOutdoorHumidity').checked = true;";
-		$htmlString .= "}";
-
-
-		$htmlString .= "	loadDateData( 'daily' );";
-	/*
-		$htmlString .= "	if( getCookie('chart.daily.toDate') )";
-		$htmlString .= "	{";
-		$htmlString .= "		document.getElementById('chart.daily.toDate').value = getCookie('chart.daily.toDate');";
-		$htmlString .= "	}";
-	*/
-
-		// Draw the graph using the applied settings
-		$htmlString .= "display_chart( 'daily', 'chart' );";
-		$htmlString .= "</script>";
-
-		$htmlString .= "	</div>";
-		$htmlString .= "</div>";
-		$htmlString .= "<div class='tab_gap'></div>";
-
-		echo $htmlString;
-	}
+   echo $htmlString;
+}
 }
 ?>
+
+<script>
+
+function echart_draw()
+{
+   // These should probably all use some generic read_daily_data.php that takes an argument for which file
+   var ajax1 = $.ajax({
+      url: "php/read_daily_data1.php",
+      method: "GET",
+      dataType: "text",
+      async: true,
+      success: function(result) { }
+   });
+
+   var ajax2 = $.ajax({
+      url: "php/read_daily_data2.php",
+      method: "GET",
+      dataType: "text",
+      async: true,
+      success: function(result) { }
+   });
+
+   var ajax3 = $.ajax({
+      url: "php/read_daily_data3.php",
+      method: "GET",
+      dataType: "text",
+      async: true,
+      success: function(result) { }
+   });
+
+   var ajax4 = $.ajax({
+      url: "php/read_daily_data4.php",
+      method: "GET",
+      dataType: "text",
+      async: true,
+      success: function(result) { }
+   });
+
+   var ajax5 = $.ajax({
+      url: "php/read_daily_data5.php",
+      method: "GET",
+      dataType: "text",
+      async: true,
+      success: function(result) { }
+   });
+
+$.when(ajax1, ajax2, ajax3, ajax4, ajax5).done(
+   function(mydata, cycles, setpoint, hold, override) 
+{
+
+   let my_cycles = JSON.parse(cycles[0]);
+   let my_array = JSON.parse(mydata[0]);
+   let my_setpoint = JSON.parse(setpoint[0]);
+   let my_hold = JSON.parse(hold[0]);
+   let my_override = JSON.parse(override[0]);
+   
+   const time = my_array.map(o => (o.Label * 1000));
+   const temp = my_array.map(o => o.Indoor_Temp);
+   const otemp = my_array.map(o => o.Outdoor_Temp);
+   const ohum = my_array.map(o => o.Outdoor_Hum);
+   const ihum = my_array.map(o => o.Indoor_Hum);
+
+   var chartDom = document.getElementById('daily_temperature_chart');
+   var chartDom = document.getElementById('echarts_chart');
+   var myChart1 = echarts.init(chartDom);
+
+   myChart1.dispose();
+
+   myChart1 = echarts.init(chartDom, get_current_theme());
+   var option;
+
+   var average_temp = (temp.reduce(function(a, b) { return Number(a) + Number(b); }, 0));
+   // Kindof kludgy, but calculating what we want for the max Temp y axis so that we can use a visual map
+   // that runs from the bottom to the top.  If the yAxis max is determined dynamically ("max:" just below)
+   // it will increase as soon as the visual map is created since it's trying to show a "bit more" than the max value
+   //  max: function (value) { return  Math.ceil(Math.trunc((value.max + 15) / 10)) * 10 },
+   var max_y = (Math.trunc((Math.max(...[...temp, ...otemp]) + 15) / 10)) * 10;
+
+   average_temp = (average_temp/temp.length).toFixed(2);
+
+option = {
+  legend: {
+     orient: 'horizontal',
+     data: ['Indoor Temp', 'Outdoor Temp', 'Outdoor Humidity', 'Indoor Humidity', 'Heat', 'Cool', 'Fan', 'Set Temp', 'Hold', 'Override'],
+     selected: { 'Indoor Humidity' : false , 'Fan' : false, 'Hold' : false, 'Override' : false},
+     bottom: 53,
+  },
+  grid: {
+    show: true,
+    bottom: 95,
+    left: '5%',
+    right: '5%',
+    top: '15%',
+  },
+  tooltip: {
+    trigger: 'axis'
+  },
+  title: {
+    left: 'center',
+    text: 'Thermostat data\n'+(new Intl.DateTimeFormat('en-US').format(time[0]))+" to "+(new Intl.DateTimeFormat('en-US').format(time[time.length-1]))+'    Ave temp: '+average_temp
+  },
+  toolbox: {
+     top: 6,
+     orient: 'vertical',
+     itemSize: 10,
+     feature: {
+        dataZoom: {
+           yAxisIndex: 'none'
+        },
+        restore: {},
+        saveAsImage: {}
+     }
+  },
+  visualMap: [{
+    // This map shades the "Heat" part below the indoor temp line
+    type: 'piecewise',
+    show: false,
+    dimension: 0,
+    seriesIndex: 1,
+    pieces: (function () {
+       var arr1 = [];
+       var mind;
+       var maxd;
+       var heat;
+
+       var i = 0;
+       var counter = 0;
+       var start_bef_dst = !dst((new Date(time[0])));
+
+       for (i = 0; i < my_cycles.length; i++)
+       {
+          var adjust = 0;
+
+          // This shading segment doesn't inherently know it's for heat cycles only
+          // There's no programatic link between this visualMap and the Heat line
+          // so we actually have to check the cycle type
+          if (my_cycles[i].Cycle_Type == 1)
+          {
+             // It seems that the cycle times are an hour ahead during DST
+             // but it only screws things up when the chart started during non DST
+             if (start_bef_dst && dst((new Date(my_cycles[i].Cycle_Start))))
+             {
+                // Subtract one hour
+                adjust = 1 * 60 * 60 * 1000;
+             }
+
+             mind = (new Date(my_cycles[i].Cycle_Start).getTime()) - adjust;
+             maxd = (new Date(my_cycles[i].Cycle_End).getTime()) - adjust;
+
+             heat = "rgba(180, 0, 0, 0.3)";
+             arr1[counter++] = {'min':mind, 'max':maxd, 'color':heat};
+          }
+       }
+       return (arr1)
+    })()
+  },
+  {
+    // This map shades the "Cool" part below the indoor temp line
+    type: 'piecewise',
+    show: false,
+    dimension: 0,
+    seriesIndex: 2,
+    pieces: (function () {
+       var arr1 = [];
+       var mind;
+       var maxd;
+       var orig_maxd;
+       var cold;
+
+       var i = 0;
+       var counter = 0;
+       var start_bef_dst = !dst((new Date(time[0])));
+
+       for (i = 0; i < my_cycles.length; i++)
+       {
+          var adjust = 0;
+
+          // This shading segment doesn't inherently know it's for cold cycles only
+          // There's no programatic link between this visualMap and the Heat line
+          // so we actually have to check the cycle type
+          if (my_cycles[i].Cycle_Type == 2)
+          {
+             // It seems that the cycle times are an hour ahead during DST
+             // but it only screws things up when the chart started during non DST
+             if (start_bef_dst && dst((new Date(my_cycles[i].Cycle_Start))))
+             {
+                // Subtract one hour
+                adjust = 1 * 60 * 60 * 1000;
+             }
+
+             mind = (new Date(my_cycles[i].Cycle_Start).getTime()) - adjust;
+             maxd = (new Date(my_cycles[i].Cycle_End).getTime()) - adjust;
+             orig_maxd = maxd;
+             if (maxd > time[time.length-1])
+             {
+               maxd = (new Date(time[time.length-1]).getTime());
+             }
+
+             cold = "rgba(0, 0, 180, 0.3)";
+             arr1[counter++] = {'min':mind, 'max':maxd, 'color':cold};
+          }
+       }
+       return (arr1)
+    })()
+  },
+ {
+    // This map shades the "Fan"
+    type: 'piecewise',
+    show: false,
+    dimension: 0,
+    seriesIndex: 3,
+    pieces: (function () {
+       var arr1 = [];
+       var mind;
+       var maxd;
+       var fan;
+
+       var i = 0;
+       var counter = 0;
+       var start_bef_dst = !dst((new Date(time[0])));
+
+       for (i = 0; i < my_cycles.length; i++)
+       {
+         var adjust = 0;
+
+         // This shading segment doesn't inherently know it's for cold cycles only
+         // There's no programatic link between this visualMap and the Heat line
+         // so we actually have to check the cycle type
+         if (my_cycles[i].Cycle_Type == 3)
+         {
+            // It seems that the cycle times are an hour ahead during DST
+            // but it only screws things up when the chart started during non DST
+            if (start_bef_dst && dst((new Date(my_cycles[i].Cycle_Start))))
+            {
+               // Subtract one hour
+               adjust = 1 * 60 * 60 * 1000;
+            }
+
+            mind = (new Date(my_cycles[i].Cycle_Start).getTime()) - adjust;
+            maxd = (new Date(my_cycles[i].Cycle_End).getTime()) - adjust;
+            if (maxd > time[time.length-1])
+            {
+              maxd = (new Date(time[time.length-1]).getTime());
+            }
+
+            fan = "rgba(255, 255, 0, 0.8)";
+            arr1[counter++] = {'min':mind, 'max':maxd, 'color':fan};
+         }
+       }
+       return (arr1)
+    })()
+  },
+  {
+     // This map shades the "Hold"
+     type: 'piecewise',
+     show: false,
+     dimension: 0,
+     seriesIndex: 4,
+     pieces: (function () {
+        var arr1 = [];
+        var mind;
+        var maxd;
+        var hold;
+ 
+        var i = 0;
+        var counter = 0;
+        var start_bef_dst = !dst((new Date(time[0])));
+ 
+        for (i = 0; i < my_hold.length; i++)
+        {
+           var adjust = 0;
+  
+           // It seems that the cycle times are an hour ahead during DST
+           // but it only screws things up when the chart started during non DST
+ 
+           if (start_bef_dst && dst((new Date(my_hold[i].Hold_Start_Time))))
+           {
+              // Subtract one hour
+              adjust = 1 * 60 * 60 * 1000;
+           }
+  
+           mind = (new Date(my_hold[i].Hold_Start_Time).getTime()) - adjust;
+           maxd = (new Date(my_hold[i].Hold_End_Time).getTime()) - adjust;
+  
+           if (mind < time[0])
+           {
+              mind = (new Date(time[0]).getTime());
+           }
+           if (maxd > time[time.length-1])
+           {
+              maxd = (new Date(time[time.length-1]).getTime());
+           }
+ 
+           hold = "rgba(255, 255, 255, 0.4)";
+           arr1[counter++] = {'min':mind, 'max':maxd, 'color':hold};
+        }
+        return (arr1)
+     })()
+  },
+  {
+     // This map shades the "Override"
+     type: 'piecewise',
+     show: false,
+     dimension: 0,
+     seriesIndex: 5,
+     pieces: (function () {
+        var arr1 = [];
+        var mind;
+        var maxd;
+        var override;
+ 
+        var i = 0;
+        var counter = 0;
+        var start_bef_dst = !dst((new Date(time[0])));
+ 
+        for (i = 0; i < my_override.length; i++)
+        {
+           var adjust = 0;
+  
+           // It seems that the cycle times are an hour ahead during DST
+           // but it only screws things up when the chart started during non DST
+  
+           if (start_bef_dst && dst((new Date(my_override[i].Override_Start_Time))))
+           {
+              // Subtract one hour
+              adjust = 1 * 60 * 60 * 1000;
+           }
+ 
+           mind = (new Date(my_override[i].Override_Start_Time).getTime()) - adjust;
+           maxd = (new Date(my_override[i].Override_End_Time).getTime()) - adjust;
+  
+           if (mind < time[0])
+           {
+              mind = (new Date(time[0]).getTime());
+           }
+           if (maxd > time[time.length-1])
+           {
+              maxd = (new Date(time[time.length-1]).getTime());
+           }
+ 
+           override = "rgba(0, 255, 255, 0.4)";
+           arr1[counter++] = {'min':mind, 'max':maxd, 'color':override};
+        }
+        return (arr1)
+     })()
+  },
+  {
+     // This colors the "Set Temp" line depending on whether the mode is heat or cool
+     type: 'piecewise',
+     show: false,
+     dimension: 0,
+     seriesIndex: 9,
+     pieces: (function () {
+        var d = [];
+        var len = 0;
+        var counter = 0;
+        var last_mode = my_setpoint[0]['Mode'];
+        var start_time = 0;
+        var end_time;
+        var tcolor = 0;
+        start_time =  (new Date(my_setpoint[0]['Mode_Switch_Time']).getTime());
+ 
+        for (len = 0; len < my_setpoint.length; len++)
+        {
+           // We found a transition in mode use the new color
+           tcolor = "rgba(0, 0, 0, 1)"; 
+           if (last_mode == 2)
+           {
+              tcolor = "rgba(0, 0, 180, 1)";
+           } 
+           else if (last_mode == 1)
+           {
+              tcolor = "rgba(180, 0, 0, 1)"; 
+           }
+ 
+           if ((len != 0 && last_mode != my_setpoint[len]['Mode']) || (len != 0 && len == my_setpoint.length - 1))
+           {
+              end_time = (new Date(my_setpoint[len]['Mode_Switch_Time']).getTime());
+              d[counter++] = {'min':start_time,'max':end_time,'color':tcolor}
+              start_time = (new Date(my_setpoint[len]['Mode_Switch_Time']).getTime());
+              last_mode = my_setpoint[len]['Mode'];
+           }
+        }
+        tcolor = "rgba(0, 0, 0, 1)";
+        if (last_mode == 2)
+        {
+          tcolor = "rgba(0, 0, 180, 1)";
+        }
+        else if (last_mode == 1)
+        {
+           tcolor = "rgba(180, 0, 0, 1)";
+        }
+ 
+        d[counter] = {'min':start_time,'max':time[time.length-1],'color':tcolor}
+ 
+        return d;
+     })()
+  }],
+  xAxis: {
+     type: 'time',
+     minInterval: (time[1] - time[0]),
+     axisLabel: {
+        formatter: {
+          day: '{M}/{d}',
+          month: '{M}/{yy}',
+        },
+     },
+  },
+  yAxis: [
+     {
+        type: 'value',
+        name: "Temperature",
+        alignTicks: true,
+        min: function (value) { return  Math.floor(Math.trunc((value.min - 10) / 10)) * 10},
+        max: max_y,
+        axisLine: {
+           show: true
+        }
+     },
+     {
+        type: 'value',
+        name: "Humidity",
+        alignTicks: true,
+        min: function (value) { return 0 },
+        max: function (value) { return Math.min(100, Math.ceil(Math.trunc(value.max + 9) / 10) * 10) },
+        axisLine: {
+           show: true
+        },
+        axisLabel: {
+           formatter: function (value) { if (value == value.toFixed()) {return value} else { return value.toFixed(1) } },
+        }
+     }
+  ],
+  dataZoom: [
+     {
+        type: 'inside',
+        filterMode: 'none',
+        // ValueSpan is in milliseconds: 3600 seconds in an hour, 1000 milliseconds in a second
+        // Maximum zoom is down to 2 hours (3 half hour data points)
+        minValueSpan: 3600 * 2 * 1000,
+     },
+     {
+        start: 0,
+        end: 100
+     }
+  ],
+  series: [
+     {
+        name: 'Indoor Temp',
+        type: 'line',
+        connectNulls: false,
+        symbol: 'none',
+        lineStyle: { color: 'rgb(50, 150, 80)'},
+        itemStyle: {
+           color: 'rgb(50, 150, 80)'
+        },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           var i = 0;
+           var ave_interval = 0;
+ 
+           for (i = 0; i < time.length; i++)
+           {
+              if (i == 0)
+              {
+                 ave_interval = time[i];
+              }
+              else if (i < time.length - 1)
+              {
+                 ave_interval = ((ave_interval * (i)) + (time[i] - time[i-1]))/i;
+              }
+           }
+    
+           len = 0;
+    
+           expected_interval = (Math.trunc(ave_interval/1000/60/10)*10);
+    
+           for (len = 0; len < time.length; len++)
+           {
+              if ((len + 1) < time.length)
+              {
+                 empty_length = (time[len+1] - time[len]);
+              }
+              else
+              {
+                 empty_length = 0;
+              }
+              d.push([ time[len], temp[len] ]);
+           }
+           return d;
+        })()
+     },
+     {
+        name: 'Heat',
+        type: 'line',
+        tooltip: {show: false},
+        symbol: 'none',
+        areaStyle: {},
+        lineStyle: { color: 'rgb(180, 0, 80)', width: 0},
+        itemStyle: { color: 'rgb(180, 0, 80)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           while (len < time.length) {
+              d.push([
+                 time[len],
+                 temp[len++]
+                     ]);
+           }
+           return d;
+        })()
+     },
+     {
+        name: 'Cool',
+        type: 'line',
+        tooltip: {show: false},
+        symbol: 'none',
+        areaStyle: {origin: 'end'},
+        lineStyle: { color: 'rgb(0, 0, 150)', width: 0},
+        itemStyle: { color: 'rgb(0, 0, 150)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           while (len < time.length) {
+              d.push([
+                 time[len],
+                 temp[len++]
+                     ]);
+           }
+           return d;
+        })()
+     },
+     {
+        name: 'Fan',
+        type: 'line',
+        tooltip: {show: false},
+        symbol: 'none',
+        areaStyle: {},
+        lineStyle: { color: 'rgb(220, 220, 0)', width: 0},
+        itemStyle: { color: 'rgb(220, 220, 0)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           while (len < time.length) {
+              d.push([
+                 time[len],
+                 temp[len++]
+                     ]);
+           }
+           return d;
+        })()
+     },
+     {
+        name: 'Hold',
+        type: 'line',
+        tooltip: {show: false},
+        symbol: 'none',
+        areaStyle: {},
+        lineStyle: { color: 'rgb(255, 255, 255)', width: 0},
+        itemStyle: { color: 'rgb(255, 255, 255)' },
+        data: (function () {
+           var d = [];
+
+           var ymax = max_y;
+
+           d.push([ time[0], ymax])
+           if (time.length > 0)
+           {
+              d.push([ time[time.length-1], ymax])
+           }
+           return d;
+        })()
+     },
+     {
+        name: 'Override',
+        type: 'line',
+        tooltip: {show: false},
+        symbol: 'none',
+        areaStyle: {},
+        lineStyle: { color: 'rgb(0, 255, 255)', width: 0},
+        itemStyle: { color: 'rgb(0, 255, 255)' },
+        data: (function () {
+           var d = [];
+
+           var ymax = max_y;
+
+           d.push([ time[0], ymax])
+           if (time.length > 0)
+           {
+              d.push([ time[time.length-1], ymax])
+           }
+           return d;
+        })()
+     },
+     {
+        name: 'Outdoor Temp',
+        type: 'line',
+        connectNulls: false,
+        symbol: 'none',
+        lineStyle: { color: 'rgb(150, 150, 80)' },
+        itemStyle: { color: 'rgb(150, 150, 80)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           var i = 0;
+           var ave_interval = 0;
+ 
+           for (i = 0; i < time.length; i++)
+           {
+              if (i == 0)
+              {
+                 ave_interval = time[i];
+              }
+              else if (i < time.length - 1)
+              {
+                 ave_interval = ((ave_interval * (i-1)) + (time[i] - time[i-1]))/i;
+              }
+           }
+
+           len = 0;
+ 
+           for (len = 0; len < time.length; len++)
+           {
+              // If we have a "null" value, ignore it, and bridge the prior time stamp's temp with this one.
+              // This allows us to have more indoor temps (at shorter time frames) without screwing up the charts
+              if (otemp[len] != null)
+              {
+                 expected_interval = (Math.trunc(ave_interval/1000/60/10)*10);
+                 empty_length = (time[len+1] - time[len]);
+                 d.push([ time[len], otemp[len] ]);
+              }
+           }
+           return d;
+        })()
+        ,
+        yAxisIndex: 0,
+     },
+     {
+        name: 'Indoor Humidity',
+        type: 'line',
+        symbol: 'none',
+        lineStyle: { color: 'rgb(155, 255, 155)' },
+        itemStyle: { color: 'rgb(155, 255, 155)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           var i = 0;
+           var ave_interval = 0;
+     
+           for (i = 0; i < time.length; i++)
+           {
+              if (i == 0)
+              {
+                 ave_interval = time[i];
+              }
+              else if (i < time.length - 1)
+              {
+                 ave_interval = ((ave_interval * (i-1)) + (time[i] - time[i-1]))/i;
+              }
+           }
+    
+           len = 0;
+    
+           for (len = 0; len < time.length; len++)
+           {
+              // If we have a "null" value, ignore it, and bridge the prior time stamp's humidity with this one.
+              // This allows us to have more indoor temps (at shorter time frames) without screwing up the charts
+              if (ihum[len] != null)
+              {
+                 expected_interval = (Math.trunc(ave_interval/1000/60/10)*10);
+                 empty_length = (time[len+1] - time[len]);
+                 d.push([ time[len], ihum[len] ]);
+              }
+           }
+           return d;
+        })()
+        ,
+        yAxisIndex: 1,
+     },
+     {
+        name: 'Outdoor Humidity',
+        type: 'line',
+        symbol: 'none',
+        lineStyle: { color: 'rgb(155, 255, 155)' },
+        itemStyle: { color: 'rgb(155, 255, 155)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           var i = 0;
+           var ave_interval = 0;
+ 
+           for (i = 0; i < time.length; i++)
+           {
+              if (i == 0)
+              {
+                 ave_interval = time[i];
+              }
+              else if (i < time.length - 1)
+              {
+                 ave_interval = ((ave_interval * (i-1)) + (time[i] - time[i-1]))/i;
+              }
+           }
+     
+           len = 0;
+     
+           for (len = 0; len < time.length; len++)
+           {
+              // If we have a "null" value, ignore it, and bridge the prior time stamp's humidity with this one.
+              // This allows us to have more indoor temps (at shorter time frames) without screwing up the charts
+              if (ohum[len] != null)
+              {
+                 expected_interval = (Math.trunc(ave_interval/1000/60/10)*10);
+                 empty_length = (time[len+1] - time[len]);
+                 d.push([ time[len], ohum[len] ]);
+              }
+           }
+           return d;
+        })()
+        ,
+        yAxisIndex: 1,
+     },
+     {
+        name: 'Set Temp',
+        type: 'line',
+        step: 'start',
+        connectNulls: false,
+        symbol: 'none',
+        itemStyle: { color: 'rgb(100, 100, 100)' },
+        data: (function () {
+           var d = [];
+           var len = 0;
+           var next_mst = 0;
+           var cur_mst = 0;
+           var cur_settemp;
+           var last_temp = 0;
+           var setpoint_index = 0;
+           var pushed = 0;
+           var update_mst = 0;
+
+           cur_settemp = my_setpoint[setpoint_index]['Set_Temp'];
+
+           ///
+           //  Abandon hope, all ye who enter here
+           //
+           //  In theory, the setpoint line should be easy.  Just draw a line between the points, and at a change, draw
+           //  points at both the old, and new, set point so you get a vertical line there.
+           //
+           //  Unfortunately, to be nice about it, I wanted to make it so that on the half hour marks (where the temps/humidity
+           //  are) we would also show the setpoint at that time.  Without creating points on this line there, you could eyeball
+           //  it but you may not even find a data point on this line (except the very left/first point and the ver right/last)
+           //  where the mouse hover would show the actual set point in the chart.
+           //  
+           //  The idea here is simple (I think).  Chart the set points that are in between the half hour marks, as they come,
+           //  and then when we hit a half hour mark, just create a set point data point that matches the most recent one.
+           //  Whether it's all necessary, or not, the below code is what popped out.  As I said, abondon hope, all ye who enter here.
+           ///
+
+           // Our first set point data point is actually off the left of the chart.  We use it to figure out how to start things off.
+           // If we started the time period in a heat/cool cycle (and so we have a non-null setpoint) we always want to draw it
+           // at the left most time on the x-axis (time[0]) to start things.  If it's null we don't draw this point since, at best,
+           // the set point line will start somewhere later in time if there is one, at all, in this chart.
+           if (my_setpoint[setpoint_index]['Set_Temp'] != null)
+           {
+              d.push([time[0], my_setpoint[setpoint_index]['Set_Temp'] ]);
+           }
+
+           // Note: "mst" is short for "Mode Switch Time"
+
+           // console.log((new Date(time[0]).toString())+" "+my_setpoint[setpoint_index]['Set_Temp']);
+           if (my_setpoint.length == 1)
+           {
+              // The set temp changed on, or before, the start of our timeline and doesn't change again during the whole span of 
+              // our timeline so set our next time change to be just past the end of our timeline
+              next_mst = time[time.length - 1] + 1;
+           } 
+           else 
+           {
+              // Otherwise we use the actual second (the next after the first!) setpoint timestamp
+              next_mst = (new Date(my_setpoint[++setpoint_index]['Mode_Switch_Time']).getTime());
+           }
+
+           for (len = 0; len < time.length; len++)
+           { 
+              if (time[len] < next_mst)
+              {
+                 // Push the set temp at the current time index
+                 if (cur_settemp != null)
+                 {
+                    d.push([ time[len], cur_settemp]);
+                    // console.log((new Date(time[len]).toString())+" "+cur_settemp);
+                    pushed = 1;
+                 }
+                 // loop filling all set temp changes between the current time index and the next one
+                 while ((len < (time.length - 1)) && next_mst < time[len+1])
+                 {
+                    var next_mst_foo = 0;
+                    d.push([ next_mst, cur_settemp]);
+                    // console.log((new Date(next_mst).toString())+" "+cur_settemp);
+                    cur_settemp = my_setpoint[setpoint_index]['Set_Temp'];
+                    if (setpoint_index < my_setpoint.length - 1)
+                    {
+                       setpoint_index++;
+                       next_mst = (new Date(my_setpoint[setpoint_index]['Mode_Switch_Time']).getTime());
+                    }
+                    else
+                    {
+                       next_mst = time[time.length-1]+1;
+                    }
+                 }
+              }
+              else if (time[len] == next_mst)
+              {
+                 // Wow, that was lucky.  We push the new setpoint.  We should be guaranteed that we at least one more element 
+                 // in my_setpoint[] since, if we don't, next_mst would be just past the last time index in time[].  So it's 
+                 // ok to incremenet setpoint_index here
+                 if (cur_settemp != null)
+                 {
+                    d.push([ time[len], cur_settemp]);
+                    // console.log((new Date(time[len]).toString())+" "+cur_settemp);
+                 }
+                 cur_settemp = my_setpoint[setpoint_index]['Set_Temp'];
+                 setpoint_index++;
+                 pushed = 1;  
+                 update_mst = 1;
+              }
+              else // time[len] > next_mst
+              {
+                // Here, we also know there's at least one more element in my_setpoint[] or next_mst would be just past the 
+                // last time index in time[].  Essentially = same logic as if we landed exactly on the next_mst
+                if (cur_settemp != null)
+                { 
+                   d.push([ time[len], cur_settemp]);
+                   // console.log((new Date(time[len]).toString())+" "+cur_settemp);
+                }
+                cur_settemp = my_setpoint[setpoint_index]['Set_Temp'];
+                setpoint_index++;
+                pushed = 1;  
+                update_mst = 1;
+              }
+
+              // We hit, or passed the mst, so find the next one
+              if (update_mst == 1)
+              {
+                 update_mst = 0;
+                 if (setpoint_index < my_setpoint.length)
+                 {
+                    // We've got more elements in my_setpoint[]
+                    next_mst = (new Date(my_setpoint[setpoint_index]['Mode_Switch_Time']).getTime());
+                 } 
+                 else 
+                 {
+                    // if we have no more my_setpoint[] elements, set to the last time index plus 1 so that our next_mst 
+                    // will be in the future even to the last time index in time[]
+                    next_mst = time[time.length - 1] + 1;
+                 } 
+             }
+             // If we didn't add another data point for a value of "time[len]" then we have a bug in the logic above
+             if (pushed != 1)
+             {
+                console.log("nct: " + (new Date(time[len]).toString()) + " \nnt: " + (new Date(time[len+1]).toString()) + " \nns: " + (new Date(next_mst).toString()));
+             }
+          }
+          return d;
+       })()
+       ,
+       yAxisIndex: 0,
+    },
+    {
+       // This is a line used just to be able to shade the whole background of the chart area
+       name: 'invisible',
+       type: 'line',
+       step: 'start',
+       symbol: 'none',
+       data: {},
+       yAxisIndex: 0,
+    }
+  ]
+};
+
+option && myChart1.setOption(option);
+
+myChart1.on('dataZoom', function (params) {
+   var start = 0, end = 0;
+
+   if (typeof params.batch !== 'undefined')
+   {
+      start = params.batch[0].start;
+      end = params.batch[0].end;
+   }
+   else if (typeof params.start !== 'undefined')
+   {
+      start = params.start;
+      end = params.end;
+   }
+   else return;
+
+   var start_index_time = Math.round(time.length*(start/100));
+   var   end_index_time = Math.round(time.length*(end/100))-1;
+
+   var averge_temp = 0;
+   var start_index_temp = Math.round(temp.length*(start/100));
+   var   end_index_temp = Math.round(temp.length*(end/100))-1;
+   var average_temp = 0;
+
+   i = start_index_temp;
+   while (i++ < end_index_temp)
+   {
+      average_temp += Number(temp[i]);
+   }
+   average_temp = Number(average_temp/(end_index_temp-start_index_temp)).toFixed(2);
+
+   myChart1.setOption({
+      title: {
+         left: 'center',
+         text: 'Thermostat data\n'+(new Intl.DateTimeFormat('en-US').format(time[0]))+" to "+(new Intl.DateTimeFormat('en-US').format(time[time.length-1]))+'    Ave temp: '+average_temp
+      },
+   });
+});
+
+});
+};
+
+// Returns true if passed date/time is during DST
+function dst(date = (new Date())) 
+{
+    var max = 0;
+    var min = 1000000;
+    var month = 0;
+
+    for (month = 0; month < 12; month++)
+    {
+       if ( (new Date(date.getFullYear(), month, 1).getTimezoneOffset() > max))
+       {
+          max = (new Date(date.getFullYear(), month, 1).getTimezoneOffset());
+       }
+ 
+       if ( (new Date(date.getFullYear(), month, 1).getTimezoneOffset() < min))
+       {
+          min = (new Date(date.getFullYear(), month, 1).getTimezoneOffset());
+       }
+    }
+    return ((max != min) && min == (new Date(date).getTimezoneOffset()));
+}
+</script>
