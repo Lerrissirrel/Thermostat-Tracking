@@ -68,7 +68,7 @@ div.all_tabs > div.tab:not(:target) > a:hover
 	*/
 div.all_tabs > div.tab > div.container
 {
-  background-color: #CCCCCC;									/* #CCCCCC is light gray.  This is global for all tabs and toolbars unless overridden */
+  background-color: #DCDCDC;									/* #CCCCCC is light gray.  This is global for all tabs and toolbars unless overridden */
 	border-color: #E0E0E0;
 	border-color: #FFFFFF;
 }

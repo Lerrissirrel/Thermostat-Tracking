@@ -51,7 +51,6 @@ div.all_tabs > div.tab:not(:target) > a
 	background-color: #B0D86D;
 	color: #000000;												/* Set inactive tab title font color. */
 }
-
 /* Mouse over tab is hilighted */
 div.all_tabs > div.tab:not(:target) > a:hover
 {
@@ -63,7 +62,7 @@ div.all_tabs > div.tab:not(:target) > a:hover
 	*/
 div.all_tabs > div.tab > div.container
 {
-	background-color: #CCCCCC;						/* #CCCCCC is light gray.  This is global for all tabs and toolbars unless overridden*/
+	background-color: #BBCCBB;						/* #CCCCCC is light gray.  This is global for all tabs and toolbars unless overridden*/
 	border-color: #448873;
 }
 
