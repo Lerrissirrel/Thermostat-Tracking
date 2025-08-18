@@ -36,31 +36,32 @@ class ExternalWeather
 
 		if( empty($zip) )
 		{
-			$log->logError( 'ExternalWeather: getOutdoorWeather: Cannot proceed without some kind of location identifier.' );
+			$log->Error( 'ExternalWeather: getOutdoorWeather: Cannot proceed without some kind of location identifier.' );
 			throw new ExternalWeather_Exception( 'Zip not set' );
 		}
 
 		$this->outdoorTemp = false;
 		$this->outdoorHumidity = false;
-
+// Should probably add some number of retries here just in case
 		switch( $this->config['type'] )
 		{
 			default:
 			case 'noaa':
 				if( !isset( $this->config['api_loc'] ) || empty( $this->config['api_loc'] ) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Cannot proceed without NOAA API location.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Cannot proceed without NOAA API location.' );
 					throw new ExternalWeather_Exception( 'NOAA API loc not set' );
 				}
+				/* if( !$doc = file_get_contents( $this->config['api_loc'] ) ) */
 				ini_set('user_agent','Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1312.56 Safari/537.17');
 				if( ($doc = file_get_contents( $this->config['api_loc'] )) == FALSE )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: NOAA API returned no data.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: NOAA API returned no data.' );
 					throw new ExternalWeather_Exception( 'Could not contact noaa xml' );
 				}
 				if( !$xml = simplexml_load_string( $doc ) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: NOAA xml could not be parsed.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: NOAA xml could not be parsed.' );
 					throw new ExternalWeather_Exception( 'Could not parse XML: ' . $doc );
 				}
 				if( $this->config['units'] == 'C' )
@@ -69,15 +70,17 @@ class ExternalWeather
 				}
 				else
 				{
+					$log->Info( 'ExternalWeather: getOutdoorWeather: temp F: ' . $xml->temp_f );
 					$this->outdoorTemp = $xml->temp_f;
 				}
+					$log->Info( 'ExternalWeather: getOutdoorWeather: humidity: ' . $xml->relative_humidity );
 				$this->outdoorHumidity = $xml->relative_humidity;
 			break;
 
 			case 'weatherbug':
 				if( !isset( $this->config['api_key'] ) || empty( $this->config['api_key'] ) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Cannot proceed without Weatherbug API key.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Cannot proceed without Weatherbug API key.' );
 					throw new ExternalWeather_Exception( 'Weatherbug API key not set' );
 				}
 				// Check if user configured URL for Weather API
@@ -92,12 +95,12 @@ class ExternalWeather
 
 				if( !$this->doc = file_get_contents($url) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Weatherbug API returned no data.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Weatherbug API returned no data.' );
 					throw new ExternalWeather_Exception( 'Could not contact weatherbug api' );
 				}
 				if( !$xml = simplexml_load_string($this->doc) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Weatherbug xml could not be parsed.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Weatherbug xml could not be parsed.' );
 					throw new ExternalWeather_Exception( 'Could not parse XML: ' . $this->doc );
 				}
 				$this->aws = $xml->channel->children( 'http://www.aws.com/aws' );
@@ -118,7 +121,7 @@ class ExternalWeather
 			case 'weatherunderground':
 				if( !isset( $this->config['api_key'] ) || empty( $this->config['api_key'] ) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Cannot proceed without Weatherunderground API key.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Cannot proceed without Weatherunderground API key.' );
 					throw new ExternalWeather_Exception( 'Weatherunderground API key not set' );
 				}
 				// Check if user configured URL for Weather API
@@ -132,12 +135,12 @@ class ExternalWeather
 				}
 				if( !$this->doc = file_get_contents( $this->url ) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Weatherunderground API returned no data.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Weatherunderground API returned no data.' );
 					throw new ExternalWeather_Exception( 'Could not contact weatherunderground weather api' );
 				}
 				if( !$this->xml = simplexml_load_string( $this->doc ) )
 				{
-					$log->logError( 'ExternalWeather: getOutdoorWeather: Weatherunderground xml could not be parsed.' );
+					$log->Error( 'ExternalWeather: getOutdoorWeather: Weatherunderground xml could not be parsed.' );
 					throw new ExternalWeather_Exception( 'Could not parse XML: ' . $this->doc );
 				}
 				if( $this->config['units'] == 'C' )
@@ -161,13 +164,13 @@ class ExternalWeather
 		global $log;
 		if( ! $this->config['useForecast'] )
 		{
-			$log->logWarn( 'ExternalWeather: getOutdoorForcast: Config is set to not report forecast.  So do not report forecast.' );
+			$log->Warning( 'ExternalWeather: getOutdoorForcast: Config is set to not report forecast.  So do not report forecast.' );
 			return NULL;
 		}
 
 		if( empty( $zip ) )
 		{
-			$log->logError( 'ExternalWeather: getOutdoorForcast: Cannot proceed without some kind of location identifier.' );
+			$log->Error( 'ExternalWeather: getOutdoorForcast: Cannot proceed without some kind of location identifier.' );
 			throw new ExternalWeather_Exception( 'Zip not set' );
 		}
 
