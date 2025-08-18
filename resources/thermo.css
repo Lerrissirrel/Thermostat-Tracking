@@ -6,66 +6,64 @@ body
 	background-size: contain;
 	background-repeat: repeat-y;
 	text-align: center;
-	height: 100%;
 	margin: 0px 0px 0px 0px;
 }
 
 #bigbox_html
 {
-	height: 100%;
 	width: 100%;
 }
 
 /** Absolutely everything that appeas on the ENTIRE web page should be in this big box
-	* Except the header - which should completely span the top.
-	*/
+  * Except the header - which should completely span the top.
+  */
 #bigbox
 {
-	width: 90%; 
-	height: 90%;
-	float: middle;
-	margin: 0px auto;
+	width: 96.5%; 
+	margin: 1%;
+	box-sizing: border-box;
 }
 
 /** Here are the things that can appear inside the tabs
-	*
-	*/
+  *
+  */
 
 /** Dashboard per thermostat/location appearance
-	*
-	*/
+  *
+  */
+div.dashboard
+{
+        flex-grow: 1;
+        width: 40%;
+        padding-top: 10px;
+        margin: 0px;
+        overflow-y: auto;
+}
 div.status
 {
-	margin: 0px;
 	margin-left: 50px;
 	float: left;
-	width: 40%;
-	height: 80%;
-	overflow-y: auto;
-}
-div.status p
-{
-	padding: 10px;
-	vertical-align: middle;
 }
 div.forecast
 {
-	margin: 0px;
-	padding: 10px;
 	margin-right: 50px;
 	float: right;
 }
+div.dashboard p
+{
+	vertical-align: middle;
+}
 
 /** Sprite map to replace individual graphics
-	*
-	* When adding new images to the sprite map do the following steps.
-	*
-	* 1. Determine width of new sprite and make the whole image that many pixels wider.
-	* 2. Add the new sprite to the LEFT side of the sprite map.
-	* 3. Compute the background-position to be offset from top left of new sprite to top right of whole map
-	*
-	*  Define sprite map basics
-	*/
+  *
+  * When adding new images to the sprite map do the following steps.
+  *
+  * 1. Determine width of new sprite and make the whole image that many pixels wider.
+  * 2. Add the new sprite to the LEFT side of the sprite map.
+  * 3. Compute the background-position to be offset from top left of new sprite to top right of whole map
+  *
+  *  Define sprite map basics
+  */
 div.status img
 {
 	vertical-align: middle;
@@ -75,8 +73,8 @@ div.status img
 }
 
 /** Locate individual sprites within the map.
-	*
-	*/
+  *
+  */
 div.status img.fan_on
 {
 	background-position: 194px 0px;
@@ -107,19 +105,14 @@ div.status img.wheels
 }
 
 /** Charts and tables
-	*
-	*/
+  *
+  */
 div.thermo_chart
 {
-
-	position: relative;
-	width: 98%;   
-	height: 100%;  /* Don't specify a height, just let it shrink to surround the chart itself */
 	margin-top: 0px;
 	margin-left: auto;
 	margin-right: auto;
 	overflow: auto;
-	display: table;
 }
 
 img.daily_temp_chart
@@ -148,8 +141,8 @@ div.daily_temperature_table
 
 table.thermo_table
 {
-	border-collapse: collapse;	/* Show a single line around each cell instead of a double line */
-	white-space: nowrap;				/* Do not allow any text (I'm look at you date string) to wrap */
+	border-collapse: collapse; /* Show a single line around each cell instead of a double line */
+	white-space: nowrap;       /* Do not allow any text (I'm look at you date string) to wrap */
 }
 
 table.thermo_table th
@@ -173,14 +166,12 @@ body.account
 fieldset.auto-width
 {
 	border: 1px solid #FF0000;
-	/* width: 40em; */
 	width: 75%;
 	display: inline-block;
 	padding: 10px;
 }
 fieldset.auto-width legend
 {
-	/* margin: 0 15px; */
 	padding:  0 10px;
 }
 table.form
@@ -192,5 +183,19 @@ table.form td.label
 }
 table.form td.input, td.hint
 {
-	test-align: left;
+	text-align: left;
 }
+
+input[type="range"] {
+	width: 100%;
+	margin: 0;
+}
+
+datalist {
+	display: flex;
+	justify-content: space-between;
+	writing-mode: horizontal-tb;
+	font-size: 1em;
+	width: 100%;
+}
+
