@@ -1,5 +1,8 @@
 <?php
 
+// This script is not fully operational, follow the instructions in INSTALL_README.txt
+echo "This script is not yet supported\n";
+exit;
 
 if (version_compare(PHP_VERSION, '5.2.4') < 0)
 { // Check php version.  I'm not sure there is a minimum requirement, but be safe.  (This logic is borrowed from phpBB installer)
@@ -40,7 +43,7 @@ function check_file( $filename )
     $fatal_error = $fatal_error + 1;
   }
 }
-// Check for presence of expected directories (pChart directory must be preset, but do not check for every file in there)
+// Check for presence of expected directories
 $fatal_error = 0;
 check_dir( '../images' ); // This is separate from the resources directory to make moving to other static object easier later on.
 check_dir( '../install' );
@@ -52,8 +55,9 @@ check_dir( '../resources' );  // Place keeper for CSS and JavaScript files
 
 // Check for presence of expected files (check for every file that is unique to this program)
 check_file( '../install/index.php' ); // This file (you’re making sure it's in the right place, because duh, it exists)
-check_file( '../draw_daily.php' );
-check_file( '../draw_weekly.php' );
+check_file( '../gendata_daily.php' );
+check_file( '../gendata_history.php' );
+check_file( '../gendata_compare.php' );
 check_file( '../index.php' );
 check_file( '../favicon.ico' );
 check_file( '../README' );

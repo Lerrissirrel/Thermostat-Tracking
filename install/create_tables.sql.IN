@@ -1,4 +1,19 @@
 
+CREATE TABLE IF NOT EXISTS `thermo2__thermostats` (
+  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+  `tstat_uuid` varchar(15) NULL,
+  `model` varchar(10) NULL,
+  `fw_version` varchar(10) NULL,
+  `wlan_fw_version` varchar(10) NULL,
+  `ip` varchar(15) NOT NULL,
+  `name` varchar(254) NULL,
+  `description` varchar(254) NULL,
+  `enabled` tinyint(3) unsigned DEFAULT 1,
+  `display_order` tinyint(3) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 CREATE TABLE IF NOT EXISTS `thermo2__hvac_cycles` (
   `tstat_uuid` varchar(15) NOT NULL,
   `system` smallint(6) NOT NULL,
@@ -14,8 +29,23 @@ CREATE TABLE IF NOT EXISTS `thermo2__hvac_status` (
   `start_date_heat` datetime,
   `heat_status` tinyint(1) NOT NULL,
   `cool_status` tinyint(1) NOT NULL,
-  `fan_status` tinyint(1) NOT NULL,
-  PRIMARY KEY `id` (`tstat_uuid`)
+  `fan_status` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `thermo2__hold` (
+  `id` TINYINT(3) UNSIGNED NOT NULL,
+  `start_time` DATETIME NOT NULL,
+  `end_time` DATETIME,
+  PRIMARY KEY (`id`, `start_time`),
+  CONSTRAINT `thermo2__hold_ibfk_1` FOREIGN KEY (`id`) REFERENCES `thermo2__thermostats` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `thermo2__override` (
+  `id` TINYINT(3) UNSIGNED NOT NULL,
+  `start_time` DATETIME NOT NULL,
+  `end_time` DATETIME,
+  PRIMARY KEY (`id`, `start_time`),
+  CONSTRAINT `thermo2__override_ibfk_1` FOREIGN KEY (`id`) REFERENCES `thermo2__thermostats` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `thermo2__run_times` (
@@ -23,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `thermo2__run_times` (
   `date` date NOT NULL,
   `heat_runtime` smallint(6) NOT NULL,
   `cool_runtime` smallint(6) NOT NULL,
-  PRIMARY KEY `id_date` (`tstat_uuid`,`date`)
+  PRIMARY KEY (`tstat_uuid`,`date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `thermo2__temperatures` (
@@ -33,14 +63,24 @@ CREATE TABLE IF NOT EXISTS `thermo2__temperatures` (
   `outdoor_temp` decimal(5,2) DEFAULT NULL,
   `indoor_humidity` decimal(5,2) DEFAULT NULL,
   `outdoor_humidity` decimal(5,2) DEFAULT NULL,
-  PRIMARY KEY `id_date` (`tstat_uuid`,`date`)
+  PRIMARY KEY (`tstat_uuid`,`date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `thermo2__setpoints` (
+  `id` tinyint(3) unsigned NOT NULL,
+  `set_point` decimal(5,2) DEFAULT NULL,
+  `mode` tinyint(4) unsigned DEFAULT NULL,
+  `switch_time` datetime NOT NULL,
+  PRIMARY KEY (`id`,`switch_time`),
+  CONSTRAINT `thermo2__setpoints_ibfk_1` FOREIGN KEY (`id`) REFERENCES `thermo2__thermostats` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `thermo2__time_index` (
-  `time` time NOT NULL
+  `time` time NOT NULL,
+  PRIMARY KEY (`time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `thermo2__time_index` (`time`) VALUES
+INSERT IGNORE INTO `thermo2__time_index` (`time`) VALUES
 ('00:00:00'),
 ('00:30:00'),
 ('01:00:00'),
@@ -90,30 +130,27 @@ INSERT INTO `thermo2__time_index` (`time`) VALUES
 ('23:00:00'),
 ('23:30:00');
 
-CREATE TABLE IF NOT EXISTS `thermo2__thermostats` (
-  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
-  `tstat_uuid` varchar(15) NULL,
-  `model` varchar(10) NULL,
-  `fw_version` varchar(10) NULL,
-  `wlan_fw_version` varchar(10) NULL,
-  `ip` varchar(15) NOT NULL,
-  `name` varchar(254) NULL,
-  `description` varchar(254) NULL,
-  PRIMARY KEY `id` (`id`),
-  INDEX `name` (`name`)
+CREATE TABLE IF NOT EXISTS `thermo2__users` (
+  `user_id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+  `username` varchar(15) NULL,
+  `theme` varchar(10),
+  `banned` tinyint(3) unsigned DEFAULT 0,
+  `first_login` datetime,
+  `last_login` datetime,
+  `last_login_ip` varchar(15),
+  PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `thermo2__setpoints` (
-  `id` tinyint(3) unsigned NOT NULL,
-  `set_point` decimal(5,2) DEFAULT NULL,
-  `mode` tinyint(4) unsigned DEFAULT NULL,
-  `switch_time` datetime NOT NULL,
-  KEY `id` (`id`),
-  CONSTRAINT `thermo2__setpoints_ibfk_1` FOREIGN KEY (`id`) REFERENCES `thermo2__thermostats` (`id`)
+CREATE TABLE IF NOT EXISTS `thermo2__user_therm_prefs` (
+  `user_id` tinyint(3) unsigned NOT NULL,
+  `therm_id` tinyint(3) unsigned NOT NULL,
+  `disp_order` tinyint(3) unsigned NOT NULL,
+  PRIMARY KEY (`user_id`,`therm_id`),
+  CONSTRAINT `thermo2__display_order_ibfk_1` FOREIGN KEY (`therm_id`) REFERENCES `thermo2__thermostats` (`id`),
+  CONSTRAINT `thermo2__display_order_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `thermo2__users` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-/* Have one INSERT line for each of your thermostats */
-INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.100','Bedroom','CT30');
-INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.101','Kitchen','CT30');
-INSERT INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.102','Basement','CT30');
+INSERT IGNORE INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.154','Downstairs','CT30');
+INSERT IGNORE INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.155','Upstairs','CT30');
+INSERT IGNORE INTO `thermo2__thermostats` (`ip`,`name`,`model`) VALUES ('192.168.1.156','Basement','CT30');
 

@@ -154,6 +154,7 @@ $sql = "CREATE TABLE IF NOT EXISTS thermostats (
           ip varchar(128) NOT NULL,
           name varchar(254) DEFAULT NULL,
           description varchar(254) DEFAULT NULL,
+          display_order tinyint(2) unsigned NOT NULL AUTO_INCREMENT,
           PRIMARY KEY( id ),
           KEY name( name )
         ) ENGINE = InnoDB  DEFAULT CHARSET = utf8 AUTO_INCREMENT = 2";
