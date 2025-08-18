@@ -19,8 +19,6 @@ realpath ()
 LOC=`dirname $0`
 #LOC=`realpath ${LOC}`
 cd ${LOC}
-. ../config.ksh
-
-NOW=`date "+%Y-%m-%d %H:%M:%S"`
+. ../config/config.ksh
 
 /usr/bin/php ${LOC}/thermo_update_status.php
