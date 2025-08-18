@@ -1,8 +1,10 @@
 <?php
 $start_time = microtime(true);
-require_once 'common.php';
+require_once '../common.php';
 
-$log->logInfo( 'get_instant_forecast: start' );
+session_write_close();
+
+$log->Info( 'get_instant_forecast: start' );
 
 /* Put useful comments here and either merge code with get_instant_status.php or make this a virtual clone of that file */
 
@@ -10,7 +12,7 @@ $log->logInfo( 'get_instant_forecast: start' );
 $lastZIP = '';
 $returnString = '';
 
-if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherunderground")
+if( $weatherConfig['useForecast'] )
 {	// Only check forecast if we're asking for it.
 	try
 	{
@@ -23,16 +25,20 @@ if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherundergrou
 // QQQ error here!
 //			$returnString = '';
 
+//$log->Error("Got hear 4");
 				//$stat = new Stat( $thermostatRec['ip'], $thermostatRec['tstat_id'] );
 				//$stat = new Stat( $thermostatRec['ip'] );
 
 				try
 				{
+//$log->Error("Got hear 2");
 					if( $lastZIP != $ZIP )
 					{	// Only get outside info for subsequent locations if the location has changed
 						$lastZIP = $ZIP;
 
+//$log->Error("Got hear 5");
 						$externalWeatherAPI = new ExternalWeather( $weatherConfig );
+//$log->Error("Got hear 6");
 						/** Bad code follows.
 							* I'm directly loading the data structure from weatherunderground and I ought to be using my own structure
 							*
@@ -45,10 +51,12 @@ if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherundergrou
 							*/
 						$forecastData = $externalWeatherAPI->getOutdoorForcast( $ZIP );
 
+//$log->Error("Got hear 1");
 
 						// Format data for screen presentation
 						if( is_array( $forecastData ) )
 						{
+//$log->Error("Got forecast");
 							$returnString .= "<p>The forecast for {$ZIP} is</p><br><table><tr>";
 							foreach( $forecastData as $day )
 							{
@@ -79,7 +87,7 @@ if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherundergrou
 						}
 						else
 						{
-							$log->logError( 'Expected to get an array back from $externalWeatherAPI->getOutdoorForcast( $ZIP ) but did not.' );
+							$log->Error( 'Expected to get an array back from $externalWeatherAPI->getOutdoorForcast( $ZIP ) but did not.' );
 							$returnString .= 'No response from forecast provider.';
 						}
 					}
@@ -87,7 +95,7 @@ if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherundergrou
 				}
 				catch( Exception $e )
 				{
-					$log->logError( 'get_instant_forecast: External forecast failed: ' . $e->getMessage() );
+					$log->Error( 'get_instant_forecast: External forecast failed: ' . $e->getMessage() );
 					// Need to add the Alert icon to the sprite map and set relative position in the thermo.css file
 					$returnString = $returnString . "<p><img src='images/Alert.png'/>Presently unable to read forecast.</p>";
 				}
@@ -95,11 +103,18 @@ if( $weatherConfig['useForecast'] && $weatherConfig['type'] == "weatherundergrou
 	}
 	catch( Exception $e )
 	{
-		$log->logError( 'get_instant_forecast: Some bugs failure or other ' . $e->getMessage() );
+		$log->Error( 'get_instant_forecast: Some bugs failure or other ' . $e->getMessage() );
 		$returnString = "<p><img src='images/Alert.png'/>Presently unable to read forecast.</p>";
+                $returnString = "<p class='dashboard'><table><tr><td><img src='images/Alert.png' class='wheels' /></td><td>Presently unable to read forecast.</td></tr></table></p>";
 	}
 }
-echo $returnString;
-$log->logInfo( 'get_instant_forecast: execution time was ' . (microtime(true) - $start_time) . ' seconds.' );
+else
+{
+  $returnString = "<p class='dashboard'><table><tr><td><img src='images/Alert.png' class='wheels' /></td><td>Forecast is disabled by configuration.</td></tr></table></p>";
+}
+//echo $returnString;
+//$log->Error("forecast: ".$returnString);
+print_status_and_data(0, $returnString);
+$log->Info( 'get_instant_forecast: execution time was ' . (microtime(true) - $start_time) . ' seconds.' );
 
 ?>

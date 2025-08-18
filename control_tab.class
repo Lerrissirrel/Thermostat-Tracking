@@ -1,0 +1,897 @@
+<?php
+require_once( 'basic_tab.class' );
+
+class Control extends BasicTab
+{
+	public function __construct()
+	{
+		global $thermostats;
+		global $thermostats_disabled;
+
+		parent::__construct();
+
+		$this->setTab('');
+
+
+                $this->addToTab("<div class='tab' id='schedule'> <a href='#schedule'> Control </a>");
+                $this->addToTab("     <div class='container' style='display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;width: 100%;'>");
+                $this->addToTab("          <div class='tab-toolbar' style='flex-shrink: 0; text-align: center; width: 100%'>");
+
+                $this->addToTab("               <select class='therm_select' id='chart.schedule.thermostat' onChange='javascript: saveThermostat(\"schedule\"); set_schedule_heat_fieldset_readonly(); set_schedule_cool_fieldset_readonly(); update(\"getcurrentstat\");'>");
+//               foreach( array_merge($thermostats, $thermostats_disabled) as $thermostatRec )
+                // Look to see if our $id is in the list.  If it's not let's just select the first one in the list.
+                // Note that this case can/should only happen if we've deleted or disabled the currently selected thermostat
+                // For some reason this doesn't work.  While the resulting html shows a "still existing" thermostat as selected, the dropdown still shows a blank selection
+                $therm_in_list = 0;
+                foreach( $thermostats as $thermostatRec )
+                {
+                   if (isset($id) && $id == $thermostatRec['id'])
+                   {
+                      $therm_in_list = 1;
+                   }
+                }
+                foreach( $thermostats as $thermostatRec )
+                {
+                    $this->addToTab("                                                <option ");
+                    if( isset($id) && $id == $thermostatRec['id'] || $therm_in_list == 0)
+                    {
+                        $this->addToTab( 'selected ');
+                        $therm_in_list = 1; // We've picked the first one in the list, so don't pick another
+                    }
+                    $this->addToTab(" value='"); $this->addToTab($thermostatRec['id']); $this->addToTab("'>"); $this->addToTab($thermostatRec['name']);
+                    $this->addToTab("</option>");
+                }
+                $this->addToTab("                                </select>");
+                $this->addToTab("          </div>");
+                $this->addToTab("          <div style='flex-grow: 1; overflow-y: auto; border:3px solid black'>");
+
+// All attempts to center the bloody box have failed
+//      $this->addToTab( "<div sytle='margin-left: auto; margin-right: auto;' >";
+
+// Do not use an "action", send the data via Ajax instead.  Want to limit the number of page reloads.
+// But only if it is secure.  Really need https, otherwise all the security is just pretend.
+// I'm using an https server on my site (ThermoMan)
+//
+
+      // Beginning of the "Current" section of the schedule page, at the top
+      $this->addToTab( "<form id='curSched' action='index.php' method='post' accept-charset='UTF-8'>");
+      $this->addToTab( "<fieldset class='schedule'>");
+
+      $this->addToTab( '<legend>Current</legend>');
+      $this->addToTab( "<input type='hidden' name='ac' value='current'>");
+
+// Buttons for the Modes:  Heat  Cool  Off
+      $this->addToTab( "<div style='width: 100%;'>");
+      $this->addToTab( "<div class='curSchedule' style='text-align: center; font-size: 6vh; margin-bottom: 1vh'>");
+
+      $this->addToTab( "<div class='sched_individual_div' >");
+      $this->addToTab( "<span class='sched_buttons_text'>Mode:</span>");
+      $this->addToTab( '  <input type="button" id="sched_cur_heat" class="sched_buttons2" value="Heat" style="width: 6ch; padding: 0px; box-sizing: border-box; font-size: 6vh; " onClick="javascript: setCookie(\'schedule.mode\', \'Heat\'); update(\'setmode\');">');
+      $this->addToTab( '</div>');
+
+      $this->addToTab( "<div class='sched_individual_div' style=''>");
+      $this->addToTab( '  <input type="button" id="sched_cur_cool" class="sched_buttons2" value="Cool" style="width: 6ch; padding: 0px; box-sizing: border-box; font-size: 6vh; " onClick="javascript: setCookie(\'schedule.mode\', \'Cool\'); update(\'setmode\');">');
+      $this->addToTab( '</div>');
+
+      $this->addToTab( "<div class='sched_individual_div' style=''>");
+      $this->addToTab( '  <input type="button"  id="sched_cur_off" class="sched_buttons2" value="Off"  style="width: 6ch; padding: 0px; box-sizing: border-box; font-size: 6vh; " onClick="javascript: setCookie(\'schedule.mode\', \'Off\');  update(\'setmode\');">');
+      $this->addToTab( '</div>');
+      $this->addToTab( '</div>');
+
+      $this->addToTab( "<div class='curSchedule' style='text-align: center; font-size: 6vh; margin-bottom: 1vh'>");
+
+//      $this->addToTab( "<div class='sched_buttons_div' style='padding: 0px;'>");
+
+// Displays "Fan: "
+      $this->addToTab( "<div class='sched_individual_div' style='white-space:nowrap;'><span class='sched_buttons_text'>Fan: </span>");
+      $this->addToTab( "<input type='button' class='sched_buttons' name='fan' id='sched_cur_fan_mode' value='???' style='padding-top: 0px; padding-bottom: 0px; box-sizing: border-box; text-align: center; font-size: 6vh; width: 6ch; ' onClick='javascript: update(\"setfan\");'></div>");
+
+// Displays "Hold: "
+      $this->addToTab( "<div class='sched_individual_div' style='white-space:nowrap; '><span class='sched_buttons_text'>Hold: </span>");
+      $this->addToTab( "<input type='button' class='sched_buttons' name='hold' id='sched_cur_hold' value='???' style='padding-top: 0px; padding-bottom: 0px; box-sizing: border-box; text-align: center; font-size: 6vh; width: 6ch; ' onClick='update(\"sethold\");'></div>");
+
+// Displays "Current: [current temp]"
+      $this->addToTab( "<div class='sched_individual_div' style='white-space: nowrap; '><span class='sched_buttons_text'>Current: </span>");
+      $this->addToTab( "<input type='number' class='sched_buttons' id='sched_cur_temp' style='background-color: #dddddd; padding-top: 0px; padding-bottom: 0px; box-sizing: border-box; text-align: center; font-size: 6vh; width: 5ch; border 0px solid blue;' readonly></div>");
+
+//      $this->addToTab( "</div>";
+      $this->addToTab( "</div>");
+
+//      $this->addToTab( "<div class='curSchedule' style='clear: both; text-align: center; display: block; box-sizing: border-box; text-align: center; width: 100%; border: 0px solid green'>");
+      $this->addToTab( "<div class='curSchedule' style='text-align: center; font-size: 6vh; margin-bottom: 1vh'>");
+
+// Displays "Target: <slider for temp> [temp]"
+      $this->addToTab( "<div class='sched_individual_div' style='white-space: nowrap;'><span class='target_temp_text' style='white-space: nowrap;'>Target Temp: </span>");
+//       $this->addToTab( "<div style='padding-top: 0px; padding-bottom: 0px; text-align: right; display: inline-block; font-size: 6vh; border: 0px solid red'>Target:");
+       $this->addToTab( "<input type='number' id='sched_cur_set_temp' name='amountInput' min='50' max='90' step='1' class='sched_buttons' style='box-sizing: border-box; text-align: center; font-size: 6vh; width: 5ch;  border 0px solid blue;'  onInput='javascript: update_slider(\"sched_cur_set_temp\", this.value)' onChange='javascript: update(\"settemp\");'>");
+       $this->addToTab( "</div>");
+       $this->addToTab( "</div>");
+
+       $this->addToTab( "<div class='curSchedule' style='width: 100%; text-align: center; border: 0px solid green'>");
+       $this->addToTab( "<div style='display: inline-block; border: 0px solid blue; width: 95%'>");
+       $this->addToTab( "<input class='styled-slider slider-progress' id='sched_cur_set_temp_slider' name='amountRange' type='range' min='50' max='90' step='1' style='border-radius: 1em; text-align:center; width: 100%; background: inherit; ' onInput='javascript: update_slider(\"sched_cur_set_temp\", this.value);' onChange='javascript: update(\"settemp\");'>");
+       $this->addToTab( "<datalist id='temp_values' style='font-size: 3vh'><option value='50' label='50'></option><option value='60' label='60'></option><option value='70' label='70'></option><option value='80' label='80'></option><option value='90' label='90'></option></datalist>");
+       $this->addToTab( "<script>");
+       $this->addToTab( "for (let e of document.querySelectorAll('input[type=\"range\"].slider-progress')) {");
+       $this->addToTab( "  e.style.setProperty('--value', e.value);");
+       $this->addToTab( "  e.style.setProperty('--min', e.min == '' ? '0' : e.min);");
+       $this->addToTab( "  e.style.setProperty('--max', e.max == '' ? '100' : e.max);");
+       $this->addToTab( "  e.addEventListener('input', () => e.style.setProperty('--value', e.value));");
+       $this->addToTab( "}");
+       $this->addToTab( "</script>");
+       $this->addToTab( "</div>");
+
+       $this->addToTab( "</div>");
+
+// The "Get Current Status" button
+
+      $this->addToTab( "<div class='curSchedule' style='display: table; width: 100%; table-layout: fixed;'>");
+
+//      $this->addToTab( '<div style="display: table-cell; border: 0px solid blue">');
+//      $this->addToTab( '</div>');
+
+      $this->addToTab( '<div style="display: inline-block; text-align: center; box-sizing: border-box; margin-top: 1vh; border: 0px solid green; width: 100%">');
+      $this->addToTab( '<input id="sched_sched_rescan" type="button" style="box-sizing: border-box;padding-top: 0px; padding-bottom: 0px; font-size: 5vh; display: block; margin-left: auto; margin-right: auto; margin-top: 0px; width: 16ch;" title="Fetch latest situation from thermostat (may be same as already shown)" onClick="javascript:update(\'getcurrentstat\');" value="Get Current Status">');
+      $this->addToTab( '</div>');
+
+//      $this->addToTab( '<div style="display: table-cell; border: 0px solid red;">');
+//      $this->addToTab( '</div>');
+
+      $this->addToTab( '</div>');
+
+// The two buttons to toggle the heat and cool schedules
+
+      $this->addToTab( "<div class='curSchedule' style='display: table; width: 100%; table-layout: fixed;'>");
+      $this->addToTab( '<input type="button" id="sched_advanced_button" value="Show Advanced" style="margin-top: 2vh; display: inline-block; font-size: 3vh; padding-top: 2px; padding-bottom: 1px" onClick="javascript: toggle_sched_display(\'sched_advanced\', \'sched_advanced_button\', \'Advanced\');">');
+      $this->addToTab( '</div>');
+      $this->addToTab( '</fieldset>');
+      $this->addToTab( '</form>');
+
+      $this->addToTab( '<div id="sched_advanced" style="display: none">');
+
+      $this->addToTab( "<div class='curSchedule' style='display: inline-block; width: 100%;'>");
+      $this->addToTab( '<div style="display: inline-block; width: 100%;" >');
+      $this->addToTab( '<input type="button" id="sched_cur_set_time" value="Set Time" style="display: inline-block; font-size: 3vh; padding-top: 2px; padding-bottom: 1px" onClick="javascript: update(\'settime\');">');
+      $this->addToTab( '<span id="cur_time" style="font-size: 3vh;"></span>');
+      $this->addToTab( '</div>');
+      $this->addToTab( '<div style="text-align: center; width: 100%; margin-top: 4vh; font-size: 3vh;">Schedules: ');
+      $this->addToTab( '</div>');
+      $this->addToTab( '<div style="text-align: center; width: 100%; margin-top: 0vh; font-size: 3vh;">');
+      $this->addToTab( '<input id="sched_cool_sched_toggle" type="button" style="font-size: 3vh; display: inline-block; margin-right: 1ch; width: 11ch;" title="Display the Cool schedule" onClick="javascript:toggle_sched_display(\'sched_coolSched\', \'sched_cool_sched_toggle\', \'Cool\');" value="Show Cool">');
+      $this->addToTab( '<input id="sched_heat_sched_toggle" type="button" style="font-size: 3vh; display: inline-block; width: 11ch" title="Display the Heat schedule" onClick="javascript:toggle_sched_display(\'sched_heatSched\', \'sched_heat_sched_toggle\', \'Heat\');" value="Show Heat">');
+
+      $this->addToTab( '</div>');
+       
+      $this->addToTab( '</div>');
+       
+      // Beginning of the "Cooling" section of the schedule page
+      $this->addToTab( "<div style='overflow: auto;'>");
+      $this->addToTab( "<form style='display: none;' id='sched_coolSched' action='index.php' method='post' accept-charset='UTF-8'>");
+      $this->addToTab( "<fieldset id='sched_cool_fieldset' class='schedule' disabled>");
+      $this->addToTab( '<legend>Cooling Schedule</legend>');
+      $this->addToTab( "<input type='hidden' name='ac' value='coolSched'>");
+      $this->addToTab( "<table class='schedule'>");
+
+      $str = '';
+      $str .= '<colgroup>';
+      foreach( array( 'odd', 'even', 'odd', 'even', 'odd', 'even', 'odd' ) as $parity )
+      {
+         foreach( array( 'time', 'temp' ) as $column )
+         {
+            $str .= "<col class='$parity $column' >";
+         }
+      }
+      $str .= '</colgroup>';
+      $this->addToTab( $str);
+
+      $this->addToTab( "<tr class='day'>");
+      $this->addToTab( "<td colspan='2'>Sunday</td><td colspan='2'>Monday</td><td colspan='2'>Tuesday</td><td colspan='2'>Wednesday</td><td colspan='2'>Thursday</td><td colspan='2'>Friday</td><td colspan='2'>Saturday</td>");
+      $this->addToTab( '</tr>');
+
+      /**
+         * Somehow I need to be terrifically clever with tabindex as I want the tab order to be other than HTML object creation order.
+         * I want to go through all four TIME and then all four TEMP fields for one day before going to the next.
+         * Also need to set focus to the proper (TBD) element when tab becomes visible each time.
+         *
+         * tabindex is not per form, it's global on this tab (I really hope it is NOT global per web page!)
+         * Drat, it does seem to be global per web page - manually tabbing from one tab to the next disappears
+         *  into that tabs inputs WITHOUT making that tab visible/uppermost.
+         *
+         * Need also to determine what place in the tab key ordering the Copy buttons appear.
+         */
+      $str = '';
+      $timeTabIndex = 1;
+      $tempTabIndex = 5;
+      for( $period = 0; $period < 4; $period++ )
+      {
+         $str .= '<tr>';
+         for( $day = 0; $day < 7; $day++ )
+         {
+            // I need some way to validate the string as a time 00:00 through 23:59
+             $str .= "<td class='time'><input type='time' tabindex='{$timeTabIndex}' id='d{$day}p{$period}time0' size='5' value='12:00' min='00:00' max='23:59'></td>";
+
+            // I need some way to validate the string as a temperature within limits of say 50 through 90
+            // OK, the HTML type=number supports limits, but also the server MUST NOT TRUST the data and validate range limits.
+            $str .= "<td class='cool_temp'><input type='number' tabindex='{$tempTabIndex}' id='d{$day}p{$period}temp0' value='68' min='0' max='99'></td>";
+            $timeTabIndex += 8;
+            $tempTabIndex += 8;
+         }
+         $timeTabIndex -= 55;
+         $tempTabIndex -= 55;
+         $str .= '</tr>';
+      }
+      $str .= "<tr class='day'><td colspan='2'>&nbsp;</td>";
+      for( $day = 1; $day < 7; $day++ )
+      {
+         $str .= "<td colspan='2'><input type='button' title='Copy previous day schedule to today' value='Copy' onClick='javascript: copy(0,$day);'></td>";
+      }
+      $str .= "</tr>";
+
+      $this->addToTab( $str);
+      $this->addToTab( '</table>');
+      $this->addToTab( '</fieldset>');
+      $this->addToTab( '<input id="sched_getprog_cool" type="button" style="font-size: 2vh;" title="Fetch latest schedule from thermostat (may be same as already shown)" onClick="javascript:update(\'getprogram\', \'cool\');" value="GetProg">');
+      // Need new table in DB that holds schedule
+      $this->addToTab( "<input id='sched_setprog_cool' type='button' style='font-size: 2vh;' title='Send changes to thermostat' value='Save' disabled onClick='javascript: update(\"setprogram\", \"cool\");'>");   // Ajax call to server to send new schedule to thermostat (and cue server to re-downloadschedule to archive)
+
+      // Need new cron task.  Once per day download schedule.  If it is different save it (and email user?)
+      $this->addToTab( '</form>');
+      $this->addToTab( "</div>");
+
+
+      // Beginning of the "Heating" section of the schedule page
+      $this->addToTab( '<br>');
+      $this->addToTab( "<div style='overflow: auto;'>");
+      $this->addToTab( "<form style='display: none' id='sched_heatSched' action='index.php' method='post' accept-charset='UTF-8'>");
+      $this->addToTab( "<fieldset id='sched_heat_fieldset' class='schedule' disabled>");
+      $this->addToTab( '<legend>Heating Schedule</legend>');
+      $this->addToTab( "<input type='hidden' name='ac' value='heatSched'>");
+      $this->addToTab( "<table class='schedule'>");
+      $str = '';
+      $str .= '<colgroup>';
+      foreach( array( 'odd', 'even', 'odd', 'even', 'odd', 'even', 'odd' ) as $parity )
+      {
+         foreach( array( 'time', 'temp' ) as $column )
+         {
+            $str .= "<col class='$parity $column' >";
+         }
+      }
+      $str .= '</colgroup>';
+      $this->addToTab( $str);
+
+      $this->addToTab( "<tr class='day'>");
+      $this->addToTab( "<td colspan='2'>Sunday</td><td colspan='2'>Monday</td><td colspan='2'>Tuesday</td><td colspan='2'>Wednesday</td><td colspan='2'>Thursday</td><td colspan='2'>Friday</td><td colspan='2'>Saturday</td>");
+      $this->addToTab( '</tr>');
+
+      $str = '';
+      $timeTabIndex = 57;
+      $tempTabIndex = 61;
+      for( $period = 0; $period < 4; $period++ )
+      {
+         $str .= '<tr>';
+         for( $day = 0; $day < 7; $day++ )
+         {
+            $str .= "<td class='time'><input type='time' tabindex='{$timeTabIndex}' id='d{$day}p{$period}time1' value='12:00'></td>";
+            $str .= "<td class='heat_temp'><input type='number' tabindex='{$tempTabIndex}' id='d{$day}p{$period}temp1' value='68' min='0' max='99'></td>";
+            $timeTabIndex += 8;
+            $tempTabIndex += 8;
+         }
+         $timeTabIndex -= 55;
+         $tempTabIndex -= 55;
+         $str .= '</tr>';
+      }
+      $str .= "<tr class='day'><td colspan='2'>&nbsp;</td>";
+      for( $day = 1; $day < 7; $day++ )
+      {
+         $str .= "<td colspan='2'><input type='button' title='Copy previous day schedule to today' value='Copy' onClick='javascript: copy(1,$day);'></td>";
+      }
+      $str .= "</tr>";
+      $this->addToTab( $str);
+      $this->addToTab( '</table>');
+      $this->addToTab( '</fieldset>');
+      $this->addToTab( '<input id="sched_getprog_heat" type="button" style="font-size: 2vh;" title="Fetch latest schedule from thermostat (may be same as already shown)" onClick="javascript:update(\'getprogram\', \'heat\');" value="GetProg">');
+
+//      $this->addToTab( "<input id='sched_set_defaults_heat' type='button' title='Load default heating schedule' value='Defaults' onClick='javascript: setDefaults(1);'>");
+//      $this->addToTab( "<input id='sched_restore_heat' type='button' title='Reload most recent saved heating schedule' value='Restore'>");
+      $this->addToTab( "<input id='sched_setprog_heat' type='button' style='font-size: 2vh;' title='Send changes to thermostat' value='Save' disabled onClick='javascript: update(\"setprogram\", \"heat\");'>");   // Ajax call to server to send new schedule to thermostat (and cue server to re-downloadschedule to archive)
+
+      $this->addToTab( '</form>');
+      $this->addToTab( '</div>');
+      $this->addToTab( '</div>');
+      
+                $this->addToTab("          </div>");
+                $this->addToTab("     </div>");
+                $this->addToTab("</div>");
+                $this->addToTab("<div class='tab_gap'></div>");
+
+       }
+}
+?>
+
+
+<script>
+
+function toggle_sched_advanced()
+{
+  if (document.getElementById("sched_advanced").style.display == "none")
+  {
+     document.getElementById("sched_advanced").style.display = "block";
+     document.getElementById("sched_advanced_button").value = 'Hide Advanced';
+  }
+  else
+  {
+     document.getElementById("sched_advanced").style.display = "none";
+     document.getElementById("sched_advanced_button").value = 'Show Advanced';
+  }
+}
+function toggle_sched_display(sched_el_id, button_el_id, button_name)
+{
+  if (document.getElementById(sched_el_id).style.display == "none")
+  {
+     document.getElementById(sched_el_id).style.display = "block";
+     document.getElementById(button_el_id).value = 'Hide ' + button_name;
+  }
+  else
+  {
+     document.getElementById(sched_el_id).style.display = "none";
+     document.getElementById(button_el_id).value = 'Show ' + button_name;
+  }
+}
+function update_slider(el_id, temp )
+{
+  document.getElementById(el_id).value = temp;
+  document.getElementById(el_id+'_slider').value = temp;
+  update_slider_color(el_id, temp);
+}
+function update_slider_color(el_id, temp )
+{
+  var slider = document.getElementById(el_id+'_slider');
+  var color = 0;
+  var em = (2.5 * temp) - 125;
+  var lg;
+  document.getElementById(el_id).value = temp;
+  document.getElementById(el_id+'_slider').value = temp;
+
+  em = (2.45 * temp) - 121.5;
+
+  start_color = "rgb(" + (100 + 50) + "," + 0 + ", "+ (150 + 100 ) + ")";
+  color = "rgb(" + (150 + 100 * (((temp-50)/40))) + "," + (50 + ( 100 * ((temp-50)/40))) + ", "+ (50 + (100 * (1-(temp-50)/40))) + ")";
+  lg = "linear-gradient(to right, "+start_color+","+color+") 0/"+em+"% 100% no-repeat, #efefef";
+
+  slider.style.setProperty("--lg", lg);
+  slider.style.setProperty("--thumb", color);
+
+//  document.getElementById(el_id+'_slider').style.background = "rgb(" + (150 + 100 * (((temp-50)/40))) + "," + (50 + ( 100 * ((temp-50)/40))) + ", "+ (50 + (100 * (1-(temp-50)/40))) + ")";
+}
+
+function setStyleRule(selector, rule) {
+    var stylesheet = document.styleSheets[(document.styleSheets.length - 1)];
+
+    for( var i in document.styleSheets ){
+        if( document.styleSheets[i].href && document.styleSheets[i].href.indexOf("myStyle.css") ) {
+            stylesheet = document.styleSheets[i];
+            break;
+        }
+    }
+
+    if( stylesheet.addRule ){
+        stylesheet.addRule(selector, rule);
+    } else if( stylesheet.insertRule ){
+        stylesheet.insertRule(selector + ' { ' + rule + ' }', stylesheet.cssRules.length);
+    }
+    }
+
+function copy( mode, day )
+{
+   document.getElementById( 'd'+day+'p0time'+mode ).value = document.getElementById( 'd'+(day-1)+'p0time'+mode ).value;
+   document.getElementById( 'd'+day+'p1time'+mode ).value = document.getElementById( 'd'+(day-1)+'p1time'+mode ).value;
+   document.getElementById( 'd'+day+'p2time'+mode ).value = document.getElementById( 'd'+(day-1)+'p2time'+mode ).value;
+   document.getElementById( 'd'+day+'p3time'+mode ).value = document.getElementById( 'd'+(day-1)+'p3time'+mode ).value;
+
+   document.getElementById( 'd'+day+'p0temp'+mode ).value = document.getElementById( 'd'+(day-1)+'p0temp'+mode ).value;
+   document.getElementById( 'd'+day+'p1temp'+mode ).value = document.getElementById( 'd'+(day-1)+'p1temp'+mode ).value;
+   document.getElementById( 'd'+day+'p2temp'+mode ).value = document.getElementById( 'd'+(day-1)+'p2temp'+mode ).value;
+   document.getElementById( 'd'+day+'p3temp'+mode ).value = document.getElementById( 'd'+(day-1)+'p3temp'+mode ).value;
+
+}
+
+function rescan( response, heat_or_cool )
+{
+
+//    console.log("Got to rescan\n");
+//    console.log(response);
+//    console.log("End of response\n");
+    var program_array = JSON.parse(response);
+    var day = 0, period = 0;
+//    console.log(program_array);
+
+    for (day = 0; day < 7; day++)
+    {
+        // Monday = 0 for the thermostat
+        // Sunday = 0 for us
+        var use_day = (day+1)%7;
+
+        for (period = 0; period < 4; period++ )
+        {
+            /*	    console.log(hh_mm_string);*/
+            /*	    console.log(program_array['cool'][day.toString()][1+(period*2)]);*/
+            if (heat_or_cool == 'cool')
+            {
+                var cool_hh_mm_string = new Date(program_array['cool'][day.toString()][period*2] * 60 * 1000).toISOString().substr(11, 5);
+
+                document.getElementById( 'd'+use_day+'p'+period+'time0' ).value = cool_hh_mm_string;
+                document.getElementById( 'd'+use_day+'p'+period+'temp0' ).value = program_array['cool'][day.toString()][1+(period*2)];
+            }
+            else if (heat_or_cool == 'heat')
+            {
+                var heat_hh_mm_string = new Date(program_array['heat'][day.toString()][period*2] * 60 * 1000).toISOString().substr(11, 5);
+
+                document.getElementById( 'd'+use_day+'p'+period+'time1' ).value = heat_hh_mm_string;
+                document.getElementById( 'd'+use_day+'p'+period+'temp1' ).value = program_array['heat'][day.toString()][1+(period*2)];
+            }
+        }
+    }
+}
+
+function set_schedule()
+{
+
+//    console.log("Got to set_schedule\n");
+    //console.log(response);
+//    console.log("End of response\n");
+    var program_array = JSON.parse(response);
+    var day = 0, period = 0;
+//    console.log(program_array);
+
+    for (day = 0; day < 7; day++)
+    {
+        for (period = 0; period < 4; period++ )
+        {
+            var cool_hh_mm_string = new Date(program_array['cool'][day.toString()][period*2] * 60 * 1000).toISOString().substr(11, 5);
+            var heat_hh_mm_string = new Date(program_array['heat'][day.toString()][period*2] * 60 * 1000).toISOString().substr(11, 5);
+            /*	    console.log(hh_mm_string);*/
+            /*	    console.log(program_array['cool'][day.toString()][1+(period*2)]);*/
+            document.getElementById( 'd'+day+'p'+period+'time0' ).value = cool_hh_mm_string;
+            document.getElementById( 'd'+day+'p'+period+'temp0' ).value = program_array['cool'][day.toString()][1+(period*2)];
+            document.getElementById( 'd'+day+'p'+period+'time1' ).value = heat_hh_mm_string;
+            document.getElementById( 'd'+day+'p'+period+'temp1' ).value = program_array['heat'][day.toString()][1+(period*2)];
+            
+        }
+    }
+}
+
+function rescan_currentstat( response )
+{
+//    console.log("Got to rescan_currentstat\n");
+//    console.log(response);
+//    console.log("end of response\n");
+    var currentstat_array = response;
+    var day = 0, period = 0, new_temp = 0;
+//    console.log(currentstat_array);
+
+    document.getElementById( 'sched_cur_temp' ).value = currentstat_array['temp'];
+   
+    if (currentstat_array['time'] != 0)
+    {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById( 'cur_time' ).innerHTML = "&nbsp&nbspThermostat's time: "+currentstat_array['time']+ " (Button will set to: "+hours+":"+minutes+")";
+    }
+    if (currentstat_array['tmode'] == 1)
+    {
+        document.getElementById( 'sched_cur_set_temp').removeAttribute('readonly');
+        document.getElementById( 'sched_cur_set_temp_slider').removeAttribute('disabled');
+
+        document.getElementById( 'sched_cur_heat' ).style.backgroundColor = '#ffA050';
+        setCookie( 'schedule.mode', 'Heat' );
+    }
+    else
+    {
+//        document.getElementById( 'sched_cur_heat' ).style.backgroundColor = '#dddddd';
+        document.getElementById( 'sched_cur_heat' ).style.backgroundColor = '';
+    }
+    
+    if (currentstat_array['tmode'] == 2)
+    {
+        document.getElementById( 'sched_cur_set_temp').removeAttribute('readonly');
+        document.getElementById( 'sched_cur_set_temp_slider').removeAttribute('disabled');
+
+        document.getElementById( 'sched_cur_cool' ).style.backgroundColor = '#50a0ff';
+        setCookie( 'schedule.mode', 'Cool' );
+    }
+    else
+    {
+//        document.getElementById( 'sched_cur_cool' ).style.backgroundColor = '#dddddd';
+        document.getElementById( 'sched_cur_cool' ).style.backgroundColor = '';
+    }
+
+    if (currentstat_array['tmode'] < 1 || currentstat_array['tmode'] > 2)
+    {
+        document.getElementById( 'sched_cur_set_temp').readOnly = true;
+        document.getElementById( 'sched_cur_set_temp_slider').disabled = true;
+        document.getElementById( 'sched_cur_off' ).style.backgroundColor = 'White';
+        setCookie( 'schedule.mode', 'Off' );
+    }
+    else
+    {
+//        document.getElementById( 'sched_cur_off' ).style.backgroundColor = '#dddddd';
+        document.getElementById( 'sched_cur_off' ).style.backgroundColor = '';
+    }
+        
+/*
+    if (currentstat_array['tstate'] == 1)
+    {
+        document.getElementById( 'cur_mode_state' ).innerHTML = 'Heating';
+        document.getElementById( 'cur_mode_state' ).value = 'Heating';
+    }
+    else if (currentstat_array['tstate'] == 2)
+    {
+        document.getElementById( 'cur_mode_state' ).innerHTML = 'Cooling';
+        document.getElementById( 'cur_mode_state' ).value = 'Cooling';
+    }
+    else
+    {
+        document.getElementById( 'cur_mode_state' ).innerHTML = 'Off';
+        document.getElementById( 'cur_mode_state' ).value = 'Off';
+    }
+*/
+    if (currentstat_array['override'] != 0)
+    {
+        // highlight cur temp
+//        console.log("override on");
+        document.getElementById( 'sched_cur_set_temp').style.backgroundColor = '#ee55ee';
+        document.getElementById( 'sched_cur_set_temp').title = 'Program currently overriden';
+    }
+    else
+    {
+        document.getElementById( 'sched_cur_set_temp').style.backgroundColor = null;
+        document.getElementById( 'sched_cur_set_temp').title = 'Current program temperature target';
+    }
+    if (currentstat_array['tmode'] == 1)
+    {
+        // heat
+        new_temp = currentstat_array['t_heat'];
+        document.getElementById( 'sched_cur_set_temp' ).value = currentstat_array['t_heat'];
+        document.getElementById( 'sched_cur_set_temp_slider' ).value = currentstat_array['t_heat'];
+    }
+    else if (currentstat_array['tmode'] == 2)
+    {
+        // cool
+        new_temp = currentstat_array['t_cool'];
+        document.getElementById( 'sched_cur_set_temp' ).value = currentstat_array['t_cool'];
+        document.getElementById( 'sched_cur_set_temp_slider' ).value = currentstat_array['t_cool'];
+    }
+    else
+    {
+        // Error
+    }
+    update_slider('sched_cur_set_temp',  new_temp);
+
+//    console.log(currentstat_array['fmode']);
+    switch (currentstat_array['fmode'])
+    {
+    case 0:
+    {
+        document.getElementById( 'sched_cur_fan_mode' ).value = 'Auto';   
+    }
+    break;
+    case 2:
+    {
+        document.getElementById( 'sched_cur_fan_mode' ).value = 'On';   
+    }
+    break;
+    default:
+    {
+        document.getElementById( 'sched_cur_fan_mode' ).value = 'Err';
+    }
+    break;
+    }
+
+    /*
+    if (currentstat_array['fstate'] == 1 || currentstat_array['tstate'] == 1)
+    {
+        // The CT30 doen't report the fan as being on when it's heating, although it does when it's cooling.  So fake it and say the fan is running when heat is on
+        document.getElementById( 'sched_cur_fan_state' ).value = 'On';
+    }
+    else if (currentstat_array['fstate'] == 0)
+    {
+        document.getElementById( 'sched_cur_fan_state' ).value = 'Off';
+    }
+    else
+    {
+        document.getElementById( 'sched_cur_fan_state' ).innerHTML = '???';
+    }
+    */
+    document.getElementById( 'sched_cur_hold' ).value = (currentstat_array['hold'] == 1?'On':'Off');
+}
+
+function setDefaults( mode )
+{
+   // Defaults should perhaps be in config.php?
+   var coolDefaults = [
+         // Period 1                         Period 2                         Period 3                         Period 4
+       [ { "time": '08:00', "temp": 75 }, { "time": '11:00', "temp": 80 }, { "time": '15:00', "temp": 75 }, { "time": '23:00', "temp": 72 } ],   // Sunday
+       [ { "time": '09:00', "temp": 80 }, { "time": '12:00', "temp": 75 }, { "time": '13:00', "temp": 80 }, { "time": '18:00', "temp": 72 } ],   // Monday
+       [ { "time": '09:00', "temp": 80 }, { "time": '12:00', "temp": 75 }, { "time": '13:00', "temp": 80 }, { "time": '18:00', "temp": 72 } ],   // Tuesday
+       [ { "time": '09:00', "temp": 80 }, { "time": '12:00', "temp": 75 }, { "time": '13:00', "temp": 80 }, { "time": '18:00', "temp": 72 } ],   // Wednesday
+       [ { "time": '09:00', "temp": 80 }, { "time": '12:00', "temp": 75 }, { "time": '13:00', "temp": 80 }, { "time": '18:00', "temp": 72 } ],   // Thursday
+       [ { "time": '09:00', "temp": 80 }, { "time": '12:00', "temp": 75 }, { "time": '13:00', "temp": 80 }, { "time": '18:00', "temp": 72 } ],   // Friday
+       [ { "time": '09:00', "temp": 75 }, { "time": '15:00', "temp": 80 }, { "time": '18:00', "temp": 75 }, { "time": '14:06', "temp": 72 } ]      // Saturday
+   ];
+
+   var heatDefaults = [
+       [ { "time": '09:00', "temp": 70 }, { "time": '10:00', "temp": 71 }, { "time": '12:00', "temp": 72 }, { "time": '14:00', "temp": 73 } ],
+       [ { "time": '09:01', "temp": 70 }, { "time": '10:01', "temp": 71 }, { "time": '12:01', "temp": 72 }, { "time": '14:01', "temp": 73 } ],
+       [ { "time": '09:02', "temp": 70 }, { "time": '10:02', "temp": 71 }, { "time": '12:02', "temp": 72 }, { "time": '14:02', "temp": 73 } ],
+       [ { "time": '09:03', "temp": 70 }, { "time": '10:03', "temp": 71 }, { "time": '12:03', "temp": 72 }, { "time": '14:03', "temp": 73 } ],
+       [ { "time": '09:04', "temp": 70 }, { "time": '10:04', "temp": 71 }, { "time": '12:04', "temp": 72 }, { "time": '14:04', "temp": 73 } ],
+       [ { "time": '09:05', "temp": 70 }, { "time": '10:05', "temp": 71 }, { "time": '12:05', "temp": 72 }, { "time": '14:05', "temp": 73 } ],
+       [ { "time": '09:06', "temp": 70 }, { "time": '10:06', "temp": 71 }, { "time": '12:06', "temp": 72 }, { "time": '14:06', "temp": 73 } ]
+   ];
+
+   var defaults = heatDefaults;
+   //if( document.getElementById( 'mode' ).value == 0 )
+   if( mode == 0 )
+   {
+      defaults = coolDefaults;
+      set_schedule_cool_fieldset_readwrite();
+   }
+   else
+   {
+      set_schedule_heat_fieldset_readwrite();
+   }
+
+   for( var day = 0; day < defaults.length; day++ )
+   {
+      for( var period = 0; period < defaults[day].length; period++ )
+      {
+         document.getElementById( 'd'+day+'p'+period+'time'+mode ).value = defaults[day][period].time;
+         document.getElementById( 'd'+day+'p'+period+'temp'+mode ).value = defaults[day][period].temp;
+      }
+   }
+
+}
+
+</script>
+
+<style>
+
+.curSchedule input
+{
+  color: black;
+  text-align: center;
+  border-radius: 5px;
+  border-radius: .5vw;
+  background: #dddddd;
+}
+.curSchedule input:hover
+{
+  background-color: #eeeeee;
+}
+.curSchedule input[type='button']
+{
+//  text-align: center;
+//  border-radius: .5vw;
+/*  box-shadow:
+    inset 2px 2px 3px rgb(255 255 255 / 60%),
+    inset -2px -2px 3px rgb(0 0 0 / 60%);
+*/
+}
+.curSchedule input[type='button']:hover
+{
+  background-color: #eeeeee;
+}
+div.curSchedule
+{
+//    width: 100%;
+    font-family: sans-serif;
+}
+div.schedule
+{
+    display: inline-block; /* necessary to center things */
+        width: 100%; /* Some width setting is also necessary to center things */
+//      margin: auto;
+/*      I don't know how/why this works, but this allows this div to be maximum of 100% width (as defined above) and minimum the size of the content within it (the Cooling and Heating schedules)*/
+        clear: both;
+    /*          display: table;*/
+}
+
+fieldset.schedule legend
+{
+        padding:  0 10px;
+}
+
+table.schedule
+{
+    border-collapse: collapse;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid black;
+}
+
+input.itemp
+{
+    background: green;
+}
+
+table.schedule td
+{
+        font-weight: bold;
+        font-size: 3vh;
+    /*    border: 5px solid #999999; */ /* Looks better, and is smaller, without a border */
+        padding: 1px; /* padding between all of the elements within each day's column */
+}
+col.even
+{
+        background: #ffffff;
+}
+col.odd
+{
+        background: #e8e8e8;
+}
+tr.day>td
+{
+    text-align: center;
+}
+td.time>input
+{
+//        font-size: .8em;
+        font-size: 3vh;
+        border: 1px solid #777777;
+        background: #eeeeee;
+    width: 7em; /* Use a font based width in the hopes that it scales well with different fonts and zooms */
+    text-align: left;
+    padding-left: 5px;
+    margin-left: 5px;
+}
+td.cool_temp>input
+{
+//        font-size: .5em;
+        font-size: 3vh;
+    text-align: center;
+        border: 1px solid #777777;
+        background: #BBBBBB;
+        background: #bbccff;
+    width: 3em; /* use em in the hope that it scales well with font and zoom */
+    /*  text-align: center;*/
+    padding-left: 5px;
+    /* This padding seems to help align the top and bottom of the temp box with the time box to its left */
+    padding-top: 2px;
+    padding-bottom: 3px;
+    margin-right: 5px;
+}
+
+td.heat_temp>input
+{
+//        font-size: .5em;
+    font-size: 3vh;
+    text-align: center;
+        border: 1px solid #777777;
+        background: #ffbbbb;
+    width: 3em; /* use em in the hope that it scales well with font and zoom */
+    padding-left: 5px;
+    /* This padding seems to help align the top and bottom of the temp box with the time box to its left */
+    padding-top: 2px;
+    padding-bottom: 3px;
+    margin-right: 5px;
+}
+
+/*
+div.schedule form table.schedule input[type=number]
+{
+        width: 70px;
+}
+*/
+table.therm_table
+{
+   font-size: 1.5vw;
+}
+.therm_table_button
+{
+   font-size: 1.5vw;
+}
+.therm_table_text_input
+{
+   font-size: 1.5vw;
+}
+.therm_table_select
+{
+   font-size: 1.5vw;
+}
+.therm_table_status_text
+{
+   font-size: 1.5vw;
+}
+
+<?php include 'resources/slider.css'; ?>
+/* Not sure why I need to width: 50% part but it seems to help force the divs to line up vertically, as desired, when the width goes
+   below 1050px
+*/
+.target_temp_text
+{
+    float: none;
+    font-size: 6vh;
+}
+.sched_buttons_text
+{
+    float: none;
+}
+.sched_buttons
+{
+    float: none;
+    display: inline;
+    margin-bottom: .05em;
+}
+.sched_buttons_div
+{
+   float: none;
+   width: 100%;
+   text-align: center;
+   border: 0px solid black;
+   padding-left: 1ch; 
+   padding-top: 0px; 
+   padding-bottom: 0px; 
+   margin: auto;
+   box-sizing: border-box; 
+   font-size: 6vh;
+   display: inline-block;
+}
+.sched_individual_div
+{
+   margin-left: .1em;
+   margin-right: .1em;
+
+   overflow:hidden;
+   display: inline-block;
+}
+/*@media screen and (max-width: 950px) {*/
+@media screen and ((orientation: portrait) or (max-width: 900px)) {
+.target_temp_text
+{
+    line-height: 1.8em;
+    font-size: 4.3vh;
+    float: left;
+}
+  .sched_buttons2 {
+    line-height: 1.3em;
+    margin-bottom: .05em;
+    display: block;
+    float: right;
+}
+  .sched_buttons {
+    float: right;
+    margin-bottom: .05em;
+}
+  .sched_buttons_text {
+    line-height: 1.3em;
+    float: left;
+}
+  .sched_buttons_div 
+  {
+   overflow:hidden;
+   text-align: center;
+   float: none;
+   border: 0px solid black;
+   padding: 0px;
+   box-sizing: border-box;
+   font-size: 6vh;
+   display: block;
+
+  }
+.sched_individual_div
+{
+   margin: auto;
+   text-align: center;
+   overflow:hidden;
+   border: 0px solid blue;
+   width: 13ch; 
+   display: block;
+}
+.curSchedule
+{
+//   width: 100%;
+}
+}
+
+</style>

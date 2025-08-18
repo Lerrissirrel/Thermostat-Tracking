@@ -1,0 +1,10 @@
+# Updated July 27, 2012
+
+DirectoryIndex index.html
+
+Require all denied
+# This prevents web browsers or spiders from seeing your .htaccess directives:
+<Files .htaccess>
+Require all denied
+</Files>
+# End of file

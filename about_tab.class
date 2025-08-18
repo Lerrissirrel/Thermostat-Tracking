@@ -1,0 +1,82 @@
+<?php
+require_once( 'basic_tab.class' );
+
+class About extends BasicTab
+{
+   public function __construct()
+   {
+      global $thermostats;
+      global $thermostats_disabled;
+
+      parent::__construct();
+
+      $this->setTab('');
+
+      $this->addToTab( "<div class='tab' style='white-space: nowrap' id='about'><a href='#about'><img class='tab-sprite info' src='images/img_trans.gif' alt='icon: about'> About </a>");
+      $this->addToTab( "    <div class='container' style='white-space: wrap; display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;width: 100%;'>");
+      $this->addToTab( "       <div class='tab-toolbar'>");
+      $this->addToTab( "          &nbsp;");
+      $this->addToTab( "       </div>");
+      $this->addToTab( "       <div class='content' style='padding: 10px; flex-grow: 1;border:3px solid black'>");
+      $this->addToTab( "          <p>");
+      $this->addToTab( "          <p>Source code for this project can be found on <a target='_blank' href='https://github.com/ThermoMan/3M-50-Thermostat-Tracking'>github</a>");
+      $this->addToTab( "          <p>");
+      $this->addToTab( "          <br>The project originated on Windows Home Server v1 running <a target='_blank' href='http://www.apachefriends.org/en/xampp.html'>xampp</a>. Migrated to a 'real host' to solve issues with Windows Scheduler.");
+      $this->addToTab( "          <br>I used <a target='_blank' href='http://www.winscp.net'>WinSCP</a> to connect and edited the code using <a target='_blank' href='http://www.textpad.com'>TextPad</a>.");
+      $this->addToTab( "          <p>");
+      $this->addToTab( "          <p>This project also uses code from the following external projects");
+      $this->addToTab( "          <ul style='list-style-type: circle; margin-left: 20px;'>");
+      $this->addToTab( "             <li style='margin-top: 11px;'><a target='_blank' href='https://github.com/ThermoMan/Tabbed-Interface-CSS-Only'>Tabbed-Interface-CSS-Only</a> by ThermoMan.</li>");
+      $this->addToTab( "             <li style='margin-top: 11px;'><a target='_blank' href='http://www.customicondesign.com//'>Free for non-commercial use icons from Custom Icon Designs</a>.       These icons are in the package <a target='_blank' href='http://www.veryicon.com/icons/system/mini-1/'>Mini 1 Icons</a>.</li>");
+      $this->addToTab( "             <li style='margin-top: 11px;'><a target='_blank' href='http://www.stevedawson.com/article0014.php'>Password access loosely based on code by Steve Dawson</a>.</li>");
+      $this->addToTab( "          </ul>");
+      $this->addToTab( "          <br><p>This project is based on the <a target='_blank' href='http://www.radiothermostat.com/filtrete/products/3M-50/'>Filtrete 3M Radio Thermostat</a>.");
+      $this->addToTab( "          <br>");
+      $this->addToTab( "          <div style='width:100%;text-align:center'>");
+
+      $this->addToTab( "             <a target='_blank' href='http://validator.w3.org/check?uri=referer'><img style='border:0;width:88px;height:31px;' src='images/valid-html5.png' alt='Valid HTML 5'><!--<div class='caveat'>--><!-- ANY whitespace between the start of the anchor and the start of the div adds an underscore to the page --><!--");
+      $this->addToTab( "             <br>");
+      $this->addToTab( "             <br>");
+      $this->addToTab( "          </div>--></a> <!-- ANY whitespace between the end of the div and the end of the anchor adds an underscore to the page -->");
+      $this->addToTab( "          <a target='_blank' href='http://jigsaw.w3.org/css-validator/check/referer'><img style='border:0;width:88px;height:31px;' src='https://jigsaw.w3.org/css-validator/images/vcss' alt='Valid CSS!'></a>");
+      $this->addToTab( "          <br><p>The HTML5 components are tested to work in Chrome, Safari (Mac), Android 4.0.4 default browser.  They do not work (manually type in the date) in Firefox.        I've not tested the functionality in IE.        The HTML validator suggests that the HTML 5 components may also work in Opera.</p>");
+      $this->addToTab( "      </div>");
+      $this->addToTab( "      <br>");
+
+      $this->addToTab( "      <div style='text-align: center;' id='uptime'>");
+      $this->addToTab( "      </div>");
+      $this->addToTab( "   </div>");
+      $this->addToTab( "</div>");
+   }  
+}
+?>
+
+<style>
+   a > div.caveat
+   {
+      display: none;
+      text-align: left;
+   }
+   a:hover > div.caveat
+   {
+      display: block;
+      position: absolute;
+      top: 60px;
+      left: 100px;
+      right: 100px;
+      border: 3px double;
+      padding: 0px 50px 0px 10px;
+      z-index: 100;
+      color: #000000;
+      background-color: #DCDCDC;
+      border-radius: 25px;
+   }
+   img.caveat
+   {
+      position: relative;
+      width: 19px;
+      height: 19px;
+      top: 3px;
+   }
+</style>
+

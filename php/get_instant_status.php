@@ -1,8 +1,10 @@
 <?php
 $start_time = microtime(true);
-require_once 'common.php';
+require_once '../common.php';
 
-$log->logInfo( 'get_instant_status: start' );
+session_write_close();
+
+$log->Info( 'get_instant_status: start' );
 
 /** When this function is called properly, the $userThermostats will NOT be pre-populated because it's not part of the same session.
 	*
@@ -20,19 +22,19 @@ $lastZIP = '';
 ob_start();
 var_dump($_POST);
 $result = ob_get_clean();
-$log->logInfo( 'POST ' . $result );
+$log->Info( 'POST ' . $result );
 
 ob_start();
 var_dump($_GET);
 $result = ob_get_clean();
-$log->logInfo( 'GET ' . $result );
+$log->Info( 'GET ' . $result );
 */
 
 /*
 ob_start();
 var_dump($_SESSION);
 $result = ob_get_clean();
-$log->logInfo( '_SESSION ' . $result );
+$log->Info( '_SESSION ' . $result );
 */
 
 /*
@@ -57,14 +59,14 @@ try
 		$lock = @fopen( $lockFileName, 'w' );
 		if( !$lock )
 		{
-			$log->logError( "get_instant_status: Could not write to lock file $lockFileName" );
+			$log->Error( "get_instant_status: Could not write to lock file $lockFileName" );
 			continue;
 		}
 		$setPoint = '';
 
 		if( flock( $lock, LOCK_EX ) )
 		{
-			//$log->logInfo( "get_instant_status: Connecting to Thermostat ID = ({$thermostatRec['id']})  uuid  = ({$thermostatRec['tstat_uuid']}) ip = ({$thermostatRec['ip']}) name = ({$thermostatRec['name']})" );
+			//$log->Info( "get_instant_status: Connecting to Thermostat ID = ({$thermostatRec['id']})  uuid  = ({$thermostatRec['tstat_uuid']}) ip = ({$thermostatRec['ip']}) name = ({$thermostatRec['name']})" );
 
 			//$stat = new Stat( $thermostatRec['ip'], $thermostatRec['tstat_id'] );
 			$stat = new Stat( $thermostatRec['ip'] );
@@ -75,7 +77,7 @@ try
 			}
 			catch( Exception $e )
 			{
-				$log->logError( 'get_instant_status: $stat->getStat() threw an unpleasant error and could not talk to the stat' );
+				$log->Error( 'get_instant_status: $stat->getStat() threw an unpleasant error and could not talk to the stat' );
 			}
 			$heatStatus = ($stat->tstate == 1) ? 'on' : 'off';
 			$coolStatus = ($stat->tstate == 2) ? 'on' : 'off';
@@ -101,19 +103,19 @@ try
 						$outsideData = $externalWeatherAPI->getOutdoorWeather( $ZIP );
 						$outdoorTemp = $outsideData['temp'];
 						$outdoorHumidity = $outsideData['humidity'];
-						$log->logInfo( "get_instant_status: Outside Weather for {$ZIP}: Temp $outdoorTemp Humidity $outdoorHumidity" );
+						$log->Info( "get_instant_status: Outside Weather for {$ZIP}: Temp $outdoorTemp Humidity $outdoorHumidity" );
 					//$returnString = $returnString . "<p>At $thermostatRec[name] it's $stat->time and $outdoorTemp &deg;$weatherConfig[units] outside and $stat->temp &deg;$weatherConfig[units] inside.</p>";
 						$greetingMsgWeather = "$outdoorTemp &deg;$weatherConfig[units] outside";
                                         }
                                         else
                                         {
-						$log->logError('Unable to retrieve weather info');
+						$log->Error('Unable to retrieve weather info');
                                         }
 				}
 			}
 			catch( Exception $e )
 			{
-				$log->logError( 'External weather failed: ' . $e->getMessage() );
+				$log->Error( 'External weather failed: ' . $e->getMessage() );
 				// Need to add the Alert icon to the sprite map and set relative position in the thermo.css file
 				$returnString = $returnString . "<p><img src='images/Alert.png'/ alt='alert'>Presently unable to read outside information.</p>";
 				$greetingMsgWeather = "<p><img src='images/Alert.png'/ alt='alert'>Presently unable to read outside information.</p>";
@@ -140,7 +142,7 @@ try
 }
 catch( Exception $e )
 {
-	$log->logError( 'Thermostat failed: ' . $e->getMessage() );
+	$log->Error( 'Thermostat failed: ' . $e->getMessage() );
 	// die();
 	$returnString = "<p>No response from unit, please check WiFi connection at unit location.";
 }
@@ -149,7 +151,8 @@ catch( Exception $e )
 
 // Need to JSON the text so that there is an object with values passed back?
 
-echo $returnString;
-$log->logInfo( 'get_instant_status: execution time was ' . (microtime(true) - $start_time) . ' seconds.' );
+//echo $returnString;
+print_status_and_data(0, $returnString);
+$log->Info( 'get_instant_status: execution time was ' . (microtime(true) - $start_time) . ' seconds.' );
 
 ?>

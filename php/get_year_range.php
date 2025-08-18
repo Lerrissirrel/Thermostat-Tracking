@@ -1,38 +1,33 @@
 <?php
 // Php script to get the earliest and most recent years for which we have hvac details
 // Can be used to build drop downs like in the compare tab
-require_once( 'common.php' );
+require_once( '../common.php' );
 
 $id = (isset($_REQUEST['id'])) ? $_REQUEST['id'] : null;    // Set id to chosen thermost (or null if not chosen)
 if( $id == null )
 {
-    // If the thermostat to display was not chosen, choose one
-
-    $thermostat = array_pop($thermostats);
-    if( is_array($thermostat) && isset($thermostat['id']))
-    {
-        $id = $thermostat['id'];
-        $log->logError( "get_year_range.php: Thermostat ID was not chosen, picking one from".$thermostat['id'].": $id" );
-    }
+    $log->Error("get_year_range.php: Thermostat ID was not passed in");
+    print_status_and_data(1, "NULL thermostat ID passed in");
+    exit;
 }
 
+$found_therm = 0;
 foreach( $thermostats as $thermostatRec )
 {
-    $log->logError($id.' against '.$thermostatRec['id']);
+    $log->Info($id.' against '.$thermostatRec['id']);
     if ($id == $thermostatRec['id'])
     {
-        $log->logError("get_year_range.php: got a real new Stat $id");
+        $log->Info("get_year_range.php: got a real new Stat $id");
         $stat = new Stat( $thermostatRec['ip'] );
+        $found_therm = 1;
         break;
     }
 }
-
-if( $id == null )
+if ($found_therm == 0)
 {
-    // If there still is not one chosen then abort
-    $log->logError( "get_year_range.php: Thermostat ID was NULL!" );
-    // Need to redirect output to some image showing user there was an error and suggesting to read the logs.
-    return;
+   $log->Error("get_year_range.php: No valid therm id passed in");
+   print_status_and_data(2, "No valid therm id passed in");
+   exit;
 }
 
 $minmaxSQL = "SELECT
@@ -70,9 +65,14 @@ if ($result == true)
      { 
        $latest_year = $row['latest_year'];
      };
-
      $result_json = "{\"earliest_year\": {$earliest_year}, \"latest_year\": {$latest_year}}";
    }
 }
-echo $result_json;
+else
+{
+    $log->Error("get_year_range.php: Database lookup failed");
+    print_status_and_data(3, "Database lookup failure");
+    exit;
+}
+print_status_and_data(0, $result_json);
 ?>

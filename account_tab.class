@@ -1,0 +1,89 @@
+<?php
+require_once( 'basic_tab.class' );
+
+class Account extends BasicTab
+{
+   public function __construct()
+   {
+      global $thermostats;
+      global $thermostats_disabled;
+      global $lockIcon;
+      global $lockAlt;
+
+      parent::__construct();
+
+      $this->setTab('');
+
+      $this->addToTab("<div class='tab' id='account'> <a href='#account'> <img class='".$lockIcon."' src='images/img_trans.gif' width='1' height='1' alt='".$lockAlt."'> Account </a>");
+      $this->addToTab("   <div class='container' style='display: flex; flex-direction: column; width: 100%;'>");
+      $this->addToTab("      <div class='tab-toolbar' style='flex-shrink: 0; text-align: center'>");
+      $this->addToTab("         Edit your account details here");
+      $this->addToTab("      </div>");
+      $this->addToTab("      <div class='content' style='overflow-y: auto; flex-grow: 1; padding: 10px; border: 3px solid black;'>");
+      $this->addToTab("         <table id='therm_table_acc' style='font-size: 1.5vw'>");
+      $this->addToTab("            <tr>");
+      $this->addToTab("               <th style='padding: 5px;'></th>");
+      $this->addToTab("               <th style='padding: 5px;'>Name</th>");
+      $this->addToTab("               <th style='padding: 5px;'>Description</th>");
+      $this->addToTab("               <th style='padding: 5px;'></th>");
+      $this->addToTab("            </tr>");
+
+      $display_order = 0;
+      foreach( array_merge($thermostats) as $thermostatRec ):
+         $this->addToTab("            <tr id='acc_row_".$thermostatRec['id']."'>");
+         $this->addToTab("               <td align='left' style='padding: 5px;'><select class='therm_table_select' id='acc_sel_".$thermostatRec['id']."'>");
+
+         // Create the drop down list of possible stat listing order positions, mark the stat's current one as "selected" so
+         // it is the default when the page first draws
+         $display_order = 0;
+         foreach( array_merge($thermostats) as $thermostatRec2 )
+         {
+            $this->addToTab("<option ");
+            if( $thermostatRec['display_order'] == $display_order)
+            {
+               $this->addToTab("selected ");
+            }
+            $this->addToTab("value='".$display_order."'>".$display_order."</option>");
+            $display_order++;
+         }
+         $this->addToTab("</select></td>");
+
+         $this->addToTab("               <td align='left' style='padding: 5px;'><input class='therm_table_text_input' style='width: 10ch; background: white;' disabled id='acc_name_".$thermostatRec['id']."' value='".$thermostatRec['name']."'></td>");
+         $this->addToTab("               <td align='left' style='padding: 5px;'><input class='therm_table_text_input' style='width: 10ch; background: white;' disabled id='acc_desc_".$thermostatRec['id']."' value='".$thermostatRec['description']."'></td>");
+         $this->addToTab("               <td align='left' style='visibility: hidden;' id='acc_id_".$thermostatRec['id']."' style='padding: 5px;'>".$thermostatRec['id']."</td>");
+         $this->addToTab("            </tr>");
+      endforeach;
+      $this->addToTab("         </table>");
+      // Note that saving the order saves it for everyone, not just the current user.  This should become a user setting
+      $this->addToTab("         <button type='button' class='therm_table_button' id='save_order_button' style='margin-bottom: 1vh; width: 35ch' onClick='javascript: update(\"update_order\");'>Save thermostat display order</button>&nbsp&nbsp<span class='therm_table_status_text' id='save_order_text'></span>");
+      $this->addToTab("         <br>");
+      $this->addToTab("         <span class='therm_table_status_text'>Choose appearance: <select class='therm_table_select' id='colorPicker' onChange='javascript: switch_style( document.getElementById( \"colorPicker\" ).value )'>");
+
+      // This should not be hard coded like this.  Need to figure out a better way.  But then there
+      // were only two themes for the first 10+ years!
+      // Generate the drop down list of possible themes, making the current one the default
+      // Note these are not saved anywhere but in cookies, so far.  Eventually this should 
+      // be saved as a user preference
+      foreach (['white' => 'Ice', 'green' => 'Leafy', 'blue' => 'Sky'] as $theme => $value)
+      {
+         $selected = '';
+         if (isset($_COOKIE['theme']) && $_COOKIE['theme'] == $theme)
+         {
+            $selected = 'selected';
+         }
+         else if (!isset($_COOKIE['theme']) && $theme == 'green')
+         {
+            $selected = 'selected';
+         }
+
+         $this->addToTab("<option value='".$theme."' ".$selected.">".$value."</option>");
+      }
+      $this->addToTab("         </select></span>");
+      $this->addToTab("      </div>");
+      $this->addToTab("   </div>");
+      $this->addToTab("</div>");
+      $this->addToTab("<div class='tab_gap'></div>");
+
+   }  
+}
+?>

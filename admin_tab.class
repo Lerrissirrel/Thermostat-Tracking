@@ -1,0 +1,81 @@
+<?php
+require_once( 'basic_tab.class' );
+
+class Admin extends BasicTab
+{
+   public function __construct()
+   {
+      global $thermostats;
+      global $thermostats_disabled;
+      global $lockIcon;
+      global $lockAlt;
+
+      parent::__construct();
+
+      $this->setTab('');
+
+      $this->addToTab("<div class='tab' id='admin'> <a href='#admin'> <img class='".$lockIcon."' src='images/img_trans.gif' width='1' height='1' alt='".$lockAlt."'> Admin </a>");
+      $this->addToTab("   <div class='container' style='display: flex; flex-direction: column; width: 100%;'>");
+      $this->addToTab("      <div class='tab-toolbar' style='flex-shrink: 0; text-align: center'>");
+      $this->addToTab("         Edit configuration details here");
+      $this->addToTab("      </div>");
+      // Generate the table with all the known thermostats in it
+      $this->addToTab("      <div class='content' style='overflow-y: auto; flex-grow: 1; padding: 10px; border: 3px solid black;'>");
+      $this->addToTab("         <table id='therm_table_admin' style='font-size: 1.5vw'>");
+      // Table header
+      $this->addToTab("            <tr>");
+      $this->addToTab("               <th style='padding: 5px;'>UUID</th>");
+      $this->addToTab("               <th style='padding: 5px;'>Name</th>");
+      $this->addToTab("               <th style='padding: 5px;'>Description</th>");
+      $this->addToTab("               <th style='padding: 5px;'>IP</th>");
+      $this->addToTab("               <th style='padding: 5px;'>Model</th>");
+      $this->addToTab("               <th style='padding: 5px;'>FW</th>");
+      $this->addToTab("               <th style='padding: 5px;'>WLAN FW</th>");
+      $this->addToTab("               <th style='padding: 5px;'>Enabled</th>");
+      $this->addToTab("               <th style='padding: 5px;'></th>");
+      $this->addToTab("               <th style='padding: 5px;'></th>");
+      $this->addToTab("               <th style='padding: 5px;'></th>");
+      $this->addToTab("               <th style='padding: 5px;'></th>");
+      $this->addToTab("            </tr>");
+
+      // A row for each thermstat - both the ones that are enabled and ones that are disabled
+      foreach( array_merge($thermostats, $thermostats_disabled) as $thermostatRec ):
+         $this->addToTab("             <tr id='adm_row_".$thermostatRec['id']."'>");
+         $this->addToTab("                <td align='center' id='adm_uuid_".$thermostatRec['id']."' style='padding: 5px;'>".$thermostatRec['tstat_uuid']."</td>");
+         $this->addToTab("                <td align='left' style='padding: 5px;'><input class='therm_table_text_input' style='width: 10ch; background: white;' disabled id='adm_name_".$thermostatRec['id']."' value='".$thermostatRec['name']."'></td>");
+         $this->addToTab("                <td align='left' style='padding: 5px;'><input class='therm_table_text_input' style='width: 10ch; background: white;' disabled id='adm_desc_".$thermostatRec['id']."' value='".$thermostatRec['description']."'></td>");
+         $this->addToTab("                <td align='left' style='padding: 5px;'><input class='therm_table_text_input' style='width: 15ch; background: white;' disabled id='adm_ip_".$thermostatRec['id']."' value='".$thermostatRec['ip']."' oninput='adm_clear_therm(".$thermostatRec['id'].")'></td>");
+         $this->addToTab("                <td align='center' id='adm_model_".$thermostatRec['id']."' style='padding: 5px;'>".$thermostatRec['model']."</td>");
+         $this->addToTab("                <td align='left' id='adm_fw_version_".$thermostatRec['id']."' style='padding: 5px;'>".$thermostatRec['fw_version']."</td>");
+         $this->addToTab("                <td align='left' id='adm_wlan_fw_version_".$thermostatRec['id']."' style='padding: 5px;'>".$thermostatRec['wlan_fw_version']."</td>");
+         $this->addToTab("                <td align='left' style='padding: 5px; text-align: center;'><input type='checkbox' style='background: white' disabled onChange='javascript: admin_update_enabled_therms();' id='adm_enabled_".$thermostatRec['id']."' ");
+         if ($thermostatRec['enabled'] == 1)
+         {
+            $this->addToTab("checked");
+         }
+         $this->addToTab("></td>");
+ 
+         $this->addToTab("                <td align='center' style='padding: 5px;'><input class='therm_table_button' id='adm_edit_".$thermostatRec['id']."' type='button' value='Edit' onClick='javascript: set_editable(".$thermostatRec['id'].");'></td>");
+         $this->addToTab("                <td align='center' style='padding: 5px;'><input class='therm_table_button' id='adm_test_".$thermostatRec['id']."' type='button' value='Test' onClick='javascript: update(\"test_therm\", ".$thermostatRec['id'].");'></td>");
+         $this->addToTab("                <td align='center' style='padding: 5px;'><input class='therm_table_button' id='adm_delete_".$thermostatRec['id']."' type='button' value='Delete' onClick='javascript: update(\"delete_therm\", ".$thermostatRec['id'].");'></td>");
+         $this->addToTab("                <td align='left' style='visibility: hidden;' id='adm_id_".$thermostatRec['id']."' style='padding: 5px;'>".$thermostatRec['id']."</td>");
+         $this->addToTab("              </tr>");
+      endforeach;
+
+      $this->addToTab("         </table>");
+
+      // A few miscellaneous Admin operations
+      $this->addToTab("         <button type='button' class='therm_table_button' style='margin-bottom: 1vh; width: 35ch;' onClick='javascript: add_row(\"\");'>Add Thermostat</button>&nbsp&nbsp<br>");
+      $this->addToTab("         <button type='button' class='therm_table_button' id='find_therms_button' style='margin-bottom: 1vh; width: 35ch;' onClick='javascript: update(\"find_therms\");'>Find Thermostats</button>&nbsp&nbsp<span class='therm_table_status_text' id='find_therms_text'></span><br>");
+      $this->addToTab("         <button type='button' class='therm_table_button' id='save_thermostats_button' style='width: 35ch' onClick='javascript: update(\"update_thermostats\");'>Save edited thermostat parameters</button>&nbsp&nbsp<span class='therm_table_status_text' id='save_thermostats_text'></span>");
+      $this->addToTab("         <br><br>");
+      $this->addToTab("         <button type='button'class='therm_table_button'  id='backup_button' onClick='javascript: update(\"backup\");'>Backup Database</button>&nbsp&nbsp<span class='therm_table_status_text' id='backup' class='therm_table_status_text' ></span>");
+      $this->addToTab("         <br><br>");
+
+      $this->addToTab("      </div>");
+      $this->addToTab("   </div>");
+      $this->addToTab("</div>");
+      $this->addToTab("<div class='tab_gap'></div>");
+   }  
+}
+?>
